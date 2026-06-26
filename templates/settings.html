@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block header_title %}
+<h1>Pengaturan Konversi & Toleransi</h1>
+<p>Rumus konversi item AI — Sisa (kg) dan batas peringatan</p>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .grid-2-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    
+    .setting-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+    .card-header { display: flex; gap: 12px; margin-bottom: 24px; align-items: flex-start; }
+    .card-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .card-icon.blue { background: var(--color-karbo-bg); color: var(--color-karbo); }
+    .card-icon.yellow { background: var(--color-buah-bg); color: #ca8a04; }
+    .card-title-text { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
+    .card-subtitle-text { font-size: 12px; color: var(--text-muted); }
+    
+    .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; padding: 12px 16px; border-radius: 8px; font-size: 12px; margin-bottom: 24px; display: flex; gap: 12px; align-items: center; }
+    
+    .conversion-row { display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border-color); }
+    .conversion-row:last-child { border-bottom: none; margin-bottom: 24px; }
+    
+    .cat-pill-settings { width: 120px; text-align: center; font-size: 12px; font-weight: 600; padding: 6px 0; border-radius: 6px; }
+    
+    .conv-label { margin-left: 16px; font-size: 13px; color: var(--text-muted); flex: 1; }
+    
+    .input-group { display: flex; align-items: center; gap: 8px; }
+    .input-num { width: 80px; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; text-align: right; outline: none; font-size: 13px; }
+    .input-unit { font-size: 12px; color: var(--text-muted); width: 30px; }
+    
+    .tolerance-card { border-radius: 8px; padding: 16px; margin-bottom: 16px; border: 1px solid transparent; }
+    .tol-normal { background: var(--color-sayur-bg); border-color: #bbf7d0; }
+    .tol-warning { background: var(--color-buah-bg); border-color: #fef08a; }
+    .tol-critical { background: var(--color-proth-bg); border-color: #fecaca; }
+    
+    .tol-title { font-weight: 600; font-size: 13px; margin-bottom: 12px; }
+    .tol-content { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text-main); }
+    
+    .tol-input { width: 60px; padding: 6px; border: 1px solid white; border-radius: 6px; text-align: center; outline: none; font-size: 13px; }
+    
+    .notification-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); margin-bottom: 24px; }
+    .notif-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+    .notif-desc { font-size: 12px; color: var(--text-muted); }
+    
+    .toggle-switch { position: relative; width: 44px; height: 24px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--primary-blue); border-radius: 24px; transition: .4s; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; border-radius: 50%; transition: .4s; transform: translateX(20px); }
+    
+    .action-row { display: flex; justify-content: flex-end; gap: 12px; }
+    .btn-black { background: #1e293b; color: white; }
+    .btn-cancel { background: #f1f5f9; color: var(--text-main); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2-settings">
+    <div class="setting-card">
+        <div class="card-header">
+            <div class="card-icon blue"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div>
+                <div class="card-title-text">Standar berat per item (gram)</div>
+                <div class="card-subtitle-text">Berat rata-rata 1 item sisa per kategori</div>
+            </div>
+        </div>
+        
+        <div class="alert-info">
+            <i class="fa-solid fa-circle-info"></i> Nilai ini digunakan sistem untuk mengubah jumlah item AI menjadi estimasi berat sisa dalam kilogram pada formulir.
+        </div>
+        
+        <div class="conversion-row">
+            <div class="cat-pill-settings" style="background:var(--color-karbo-bg); color:var(--color-karbo);">Karbohidrat</div>
+            <div class="conv-label">1 item =</div>
+            <div class="input-group">
+                <input type="number" class="input-num" value="250">
+                <span class="input-unit">gram</span>
+            </div>
+        </div>
+        
+        <div class="conversion-row">
+            <div class="cat-pill-settings" style="background:var(--color-proth-bg); color:var(--color-proth);">Prot. Hewani</div>
+            <div class="conv-label">1 item =</div>
+            <div class="input-group">
+                <input type="number" class="input-num" value="120">
+                <span class="input-unit">gram</span>
+            </div>
+        </div>
+        
+        <div class="conversion-row">
+            <div class="cat-pill-settings" style="background:var(--color-protn-bg); color:var(--color-protn);">Prot. Nabati</div>
+            <div class="conv-label">1 item =</div>
+            <div class="input-group">
+                <input type="number" class="input-num" value="80">
+                <span class="input-unit">gram</span>
+            </div>
+        </div>
+        
+        <div class="conversion-row">
+            <div class="cat-pill-settings" style="background:var(--color-sayur-bg); color:var(--color-sayur);">Sayur</div>
+            <div class="conv-label">1 item =</div>
+            <div class="input-group">
+                <input type="number" class="input-num" value="80">
+                <span class="input-unit">gram</span>
+            </div>
+        </div>
+        
+        <div class="conversion-row">
+            <div class="cat-pill-settings" style="background:var(--color-buah-bg); color:#ca8a04;">Buah</div>
+            <div class="conv-label">1 item =</div>
+            <div class="input-group">
+                <input type="number" class="input-num" value="100">
+                <span class="input-unit">gram</span>
+            </div>
+        </div>
+        
+        <div class="action-row">
+            <button class="btn btn-cancel">Batal</button>
+            <button class="btn btn-black"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+        </div>
+    </div>
+    
+    <div class="setting-card">
+        <div class="card-header">
+            <div class="card-icon yellow"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div>
+                <div class="card-title-text">Batas toleransi peringatan</div>
+                <div class="card-subtitle-text">Ambang % sisa yang memicu alert</div>
+            </div>
+        </div>
+        
+        <div class="tolerance-card tol-normal">
+            <div class="tol-title" style="color: #166534;">Normal (hijau)</div>
+            <div class="tol-content">
+                Sisa di bawah <input type="number" class="tol-input" value="10"> %
+            </div>
+        </div>
+        
+        <div class="tolerance-card tol-warning">
+            <div class="tol-title" style="color: #854d0e;">Perhatian (kuning)</div>
+            <div class="tol-content">
+                Sisa antara 10% hingga <input type="number" class="tol-input" value="15"> %
+            </div>
+        </div>
+        
+        <div class="tolerance-card tol-critical">
+            <div class="tol-title" style="color: #991b1b;">Kritis (merah)</div>
+            <div class="tol-content">
+                Sisa di atas <b>15%</b> — wajib dilaporkan ke pengawas
+            </div>
+        </div>
+        
+        <div class="notification-row">
+            <div>
+                <div class="notif-title">Notifikasi email otomatis</div>
+                <div class="notif-desc">Alert saat kategori melebihi batas kritis</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="action-row">
+            <button class="btn btn-cancel">Batal</button>
+            <button class="btn btn-black"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPPG Debong Kulon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>SPPG Debong Kulon</h2>
+            <p>Yayasan Kelud Insan Mandiri<br>Portal Akuntan - 2026</p>
+        </div>
+        
+        <nav class="sidebar-menu">
+            <div class="menu-section">UTAMA</div>
+            <ul>
+                <li class="{% if request.path == '/dashboard' %}active{% endif %}">
+                    <a href="/dashboard"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+                </li>
+                <li class="{% if request.path == '/formulir' %}active{% endif %}">
+                    <a href="/formulir"><i class="fa-regular fa-clipboard"></i> Formulir SPPG</a>
+                </li>
+                <li class="{% if request.path == '/log-sinkronisasi' %}active{% endif %}">
+                    <a href="/log-sinkronisasi"><i class="fa-solid fa-clock-rotate-left"></i> Log Sinkronisasi</a>
+                </li>
+            </ul>
+
+            <div class="menu-section">PENGATURAN</div>
+            <ul>
+                <li class="{% if request.path == '/pengaturan' %}active{% endif %}">
+                    <a href="/pengaturan"><i class="fa-solid fa-sliders"></i> Konversi & Toleransi</a>
+                </li>
+                <li class="{% if request.path == '/master-menu' %}active{% endif %}">
+                    <a href="/master-menu"><i class="fa-solid fa-list"></i> Master Menu</a>
+                </li>
+                <li class="{% if request.path == '/karyawan' %}active{% endif %}">
+                    <a href="/karyawan"><i class="fa-solid fa-users"></i> Karyawan & Petugas</a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar">AK</div>
+            <div class="user-info">
+                <h4>Ayu Krisanti</h4>
+                <p>Akuntan SPPG</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-title">
+                {% block header_title %}
+                <h1>Dashboard Overview</h1>
+                <p>Selasa, 10 Jun 2026 • Shift Pagi & Siang</p>
+                {% endblock %}
+            </div>
+            <div class="header-actions">
+                {% block header_actions %}
+                <button class="btn btn-outline" style="color: var(--color-proth); border-color: #fecaca; background: #fef2f2;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 2 Peringatan
+                </button>
+                <button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
+                <button class="btn-icon"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                {% endblock %}
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

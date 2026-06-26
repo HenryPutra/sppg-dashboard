@@ -1,0 +1,227 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    
+    .stat-card { display: flex; flex-direction: column; }
+    .stat-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; font-size: 14px; }
+    .stat-icon.red { background: var(--color-proth-bg); color: var(--color-proth); }
+    .stat-icon.blue { background: var(--color-karbo-bg); color: var(--color-karbo); }
+    .stat-icon.green { background: var(--color-sayur-bg); color: var(--color-sayur); }
+    
+    .stat-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
+    .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+    
+    .trend-badge { display: inline-flex; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+    .trend-badge.up-red { background: var(--color-proth-bg); color: var(--color-proth); }
+    .trend-badge.up-green { background: var(--color-sayur-bg); color: var(--color-sayur); }
+    .trend-badge.neutral { background: #f1f5f9; color: var(--text-muted); }
+
+    .chart-container { height: 250px; width: 100%; position: relative; }
+
+    .summary-table { width: 100%; border-collapse: collapse; }
+    .summary-table th { text-align: left; padding: 12px 0; border-bottom: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .summary-table td { padding: 16px 0; border-bottom: 1px solid var(--border-color); font-size: 13px; font-weight: 500; }
+    .summary-table tr:last-child td { border-bottom: none; }
+
+    .scan-list { list-style: none; }
+    .scan-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+    .scan-item:last-child { border-bottom: none; }
+    .scan-info { display: flex; align-items: center; gap: 16px; font-size: 13px; font-weight: 500;}
+    .scan-time { color: var(--text-muted); }
+    .scan-pills { display: flex; gap: 8px; }
+    .scan-score { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    
+    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .card-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .header-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--color-sayur); margin-right: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid-4">
+    <div class="card stat-card">
+        <div class="stat-icon red"><i class="fa-solid fa-money-bill"></i></div>
+        <div class="stat-value" style="color: var(--color-proth);">{{ data.total_value }}</div>
+        <div class="stat-label">Estimasi nilai sisa hari ini</div>
+        <div><span class="trend-badge up-red">{{ data.value_change }}</span></div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon blue"><i class="fa-solid fa-weight-scale"></i></div>
+        <div class="stat-value" style="color: var(--primary-blue);">{{ data.total_waste }}</div>
+        <div class="stat-label">Total sisa makanan hari ini</div>
+        <div><span class="trend-badge up-red">{{ data.waste_change }}</span></div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon red"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-value" style="color: var(--color-proth);">{{ data.most_wasted }}</div>
+        <div class="stat-label">Kategori paling sering tersisa</div>
+        <div><span class="trend-badge neutral">{{ data.most_wasted_desc }}</span></div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon green"><i class="fa-solid fa-qrcode"></i></div>
+        <div class="stat-value" style="color: var(--color-sayur);">{{ data.total_scanned }}</div>
+        <div class="stat-label">Total nampan dipindai hari ini</div>
+        <div><span class="trend-badge up-green"><i class="fa-solid fa-check" style="margin-right: 4px;"></i> {{ data.scanned_desc }}</span></div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h3 class="card-title">Tren persentase sisa — 7 hari terakhir</h3>
+            <p class="card-subtitle">Gabungan semua kategori</p>
+        </div>
+        <div class="flex gap-4 items-center" style="font-size: 12px; color: var(--text-muted);">
+            <div class="flex items-center gap-2">
+                <span style="display:inline-block; width:12px; height:4px; background:var(--primary-blue);"></span> % Sisa
+            </div>
+            <div class="flex items-center gap-2">
+                <span style="display:inline-block; width:12px; height:2px; background:var(--color-proth);"></span> Toleransi (10%)
+            </div>
+        </div>
+    </div>
+    <div class="chart-container">
+        <canvas id="trendChart"></canvas>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h3 class="card-title" style="margin-bottom: 16px;">Ringkasan kategori hari ini</h3>
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th>Kategori</th>
+                    <th>Sisa (kg)</th>
+                    <th>% Sisa</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data.categories %}
+                <tr>
+                    <td><span class="cat-pill {{ item.name.split(' ')[0].lower() }}{% if item.name == 'Protein Hewani' %} proth{% elif item.name == 'Protein Nabati' %} protn{% endif %}" style="width: 110px; text-align: center;">{{ item.name }}</span></td>
+                    <td>{{ "%.1f"|format(item.sisa_kg) | replace('.', ',') }}</td>
+                    <td>{{ "%.1f"|format(item.persen) | replace('.', ',') }}%</td>
+                    <td><span class="badge {{ item.status.lower() }}">{{ item.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="card">
+        <div class="flex justify-between items-center" style="margin-bottom: 16px;">
+            <h3 class="card-title">5 scan terakhir dari mobile</h3>
+            <div style="font-size: 12px; font-weight: 600; color: var(--color-sayur);"><span class="header-dot"></span> Live</div>
+        </div>
+        <ul class="scan-list">
+            {% for scan in data.recent_scans %}
+            <li class="scan-item">
+                <div class="scan-info">
+                    <span style="color: var(--text-muted);">{{ scan.id }}</span>
+                    <span class="scan-time">{{ scan.time }}</span>
+                    <div class="scan-pills">
+                        {% for pill in scan['items'] %}
+                            {% set pill_class = 'karbo' %}
+                            {% if pill.name == 'Prot.H' %}{% set pill_class = 'proth' %}{% endif %}
+                            {% if pill.name == 'Prot.N' %}{% set pill_class = 'protn' %}{% endif %}
+                            {% if pill.name == 'Sayur' %}{% set pill_class = 'sayur' %}{% endif %}
+                            {% if pill.name == 'Buah' %}{% set pill_class = 'buah' %}{% endif %}
+                            <span class="cat-pill {{ pill_class }}">{{ pill.name }}: {{ pill.qty }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="scan-score">{{ scan.score }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    
+    // Gradient for the bars (if needed, but design looks like flat colors)
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Sel 4/6', 'Rab 5/6', 'Kam 6/6', 'Jum 7/6', 'Sab 8/6', 'Min 9/6', 'Sen 10/6'],
+            datasets: [{
+                label: '% Sisa',
+                data: [14, 10, 8, 16, 20, 12, 9],
+                backgroundColor: [
+                    '#fde047', // Yellow (14% - Perhatian)
+                    '#93c5fd', // Blue
+                    '#93c5fd', // Blue
+                    '#fca5a5', // Red (16% - Kritis)
+                    '#fca5a5', // Red (20% - Kritis)
+                    '#fde047', // Yellow (12% - Perhatian)
+                    '#93c5fd'  // Blue
+                ],
+                borderRadius: 4,
+                barPercentage: 0.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                annotation: {
+                    // We'll simulate the threshold line with a custom drawing or standard config if annotation plugin was loaded
+                    // Instead of full annotation plugin, we can draw a line manually or use a line dataset
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 24,
+                    ticks: {
+                        callback: function(value) { return value + '%'; },
+                        stepSize: 5,
+                        color: '#94a3b8',
+                        font: { size: 11 }
+                    },
+                    border: { display: false },
+                    grid: {
+                        color: '#f1f5f9',
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 12 }
+                    },
+                    border: { display: false }
+                }
+            }
+        },
+        plugins: [{
+            id: 'thresholdLine',
+            beforeDraw: (chart) => {
+                const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+                const yPos = y.getPixelForValue(10);
+                
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(left, yPos);
+                ctx.lineTo(right, yPos);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#ef4444'; // Red dashed line
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.restore();
+            }
+        }]
+    });
+</script>
+{% endblock %}

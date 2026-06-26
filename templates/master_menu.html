@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block header_title %}
+<h1>Master Data — Menu & Sasaran</h1>
+<p>Data menu harian yang masuk ke formulir SPPG otomatis</p>
+{% endblock %}
+
+{% block header_actions %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 24px; }
+    
+    .search-input-wrapper {
+        position: relative;
+    }
+    .search-input-wrapper i {
+        position: absolute;
+        left: 12px; top: 50%; transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+    .search-input {
+        padding: 8px 12px 8px 32px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 13px;
+        outline: none;
+        width: 200px;
+    }
+    
+    .shift-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    .shift-pagi { background: var(--primary-blue-light); color: var(--primary-blue); }
+    .shift-siang { background: var(--color-buah-bg); color: #ca8a04; }
+    
+    .menu-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .menu-table th { 
+        text-align: left; padding: 12px 16px; 
+        border-bottom: 1px solid var(--border-color); 
+        font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); 
+    }
+    .menu-table td { padding: 16px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+    
+    .th-color-karbo { color: var(--color-karbo) !important; background: var(--color-karbo-bg); }
+    .th-color-proth { color: var(--color-proth) !important; background: var(--color-proth-bg); }
+    .th-color-protn { color: var(--color-protn) !important; background: var(--color-protn-bg); }
+    .th-color-sayur { color: var(--color-sayur) !important; background: var(--color-sayur-bg); }
+    .th-color-buah { color: #ca8a04 !important; background: var(--color-buah-bg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h2 class="card-title">Daftar menu harian</h2>
+            <p class="card-subtitle">Diinput sebelum shift dimulai</p>
+        </div>
+        <div class="filter-bar">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" class="search-input" placeholder="Cari nama menu...">
+            </div>
+            <select class="form-control-modal" style="width: auto; padding: 8px 12px;"><option>Semua Shift</option></select>
+            <button class="btn btn-primary" onclick="document.getElementById('modalMenu').classList.add('active')"><i class="fa-solid fa-plus"></i> Tambah Menu Harian</button>
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="menu-table">
+            <thead>
+                <tr>
+                    <th>Tanggal</th>
+                    <th>Shift</th>
+                    <th>Nama Menu</th>
+                    <th>Sasaran</th>
+                    <th>Total Porsi</th>
+                    <th class="th-color-karbo">Karbo (gr)</th>
+                    <th class="th-color-proth">Prot. H (gr)</th>
+                    <th class="th-color-protn">Prot. N (gr)</th>
+                    <th class="th-color-sayur">Sayur (gr)</th>
+                    <th class="th-color-buah">Buah (gr)</th>
+                    <th style="background: #f8fafc;">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>10/06/2026</td>
+                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
+                    <td style="font-weight: 500;">Nasi Goreng Spesial</td>
+                    <td>Siswa SD N 1 Debong</td>
+                    <td>820</td>
+                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
+                    <td style="color: var(--color-proth); font-weight: 500;">120</td>
+                    <td style="color: var(--color-protn); font-weight: 500;">80</td>
+                    <td style="color: var(--color-sayur); font-weight: 500;">80</td>
+                    <td style="color: #ca8a04; font-weight: 500;">100</td>
+                    <td style="background: #f8fafc;">
+                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>10/06/2026</td>
+                    <td><span class="shift-badge shift-siang">Siang</span></td>
+                    <td style="font-weight: 500;">Nasi Ayam Bakar</td>
+                    <td>Siswa SD N 1 Debong</td>
+                    <td>820</td>
+                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
+                    <td style="color: var(--color-proth); font-weight: 500;">150</td>
+                    <td style="color: var(--text-muted);">—</td>
+                    <td style="color: var(--color-sayur); font-weight: 500;">100</td>
+                    <td style="color: var(--text-muted);">—</td>
+                    <td style="background: #f8fafc;">
+                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>09/06/2026</td>
+                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
+                    <td style="font-weight: 500;">Nasi Ikan + Tempe</td>
+                    <td>Siswa SD N 1 Debong</td>
+                    <td>820</td>
+                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
+                    <td style="color: var(--color-proth); font-weight: 500;">100</td>
+                    <td style="color: var(--color-protn); font-weight: 500;">80</td>
+                    <td style="color: var(--color-sayur); font-weight: 500;">80</td>
+                    <td style="color: #ca8a04; font-weight: 500;">100</td>
+                    <td style="background: #f8fafc;">
+                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px; color: var(--text-muted);">
+        <div>Menampilkan 1–3 dari 3 menu hari ini</div>
+        <a href="#" style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">Lihat riwayat menu</a>
+    </div>
+</div>
+
+<!-- Modal Tambah Menu -->
+<div class="modal-overlay" id="modalMenu">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">Tambah Menu Harian Baru</div>
+            <button class="btn-close" onclick="document.getElementById('modalMenu').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="form-group-modal">
+            <label>Nama menu</label>
+            <input type="text" class="form-control-modal" placeholder="cth: Nasi Goreng Spesial">
+        </div>
+        
+        <div class="grid-2-form">
+            <div class="form-group-modal">
+                <label>Tanggal</label>
+                <input type="date" class="form-control-modal" value="2026-06-10">
+            </div>
+            <div class="form-group-modal">
+                <label>Shift</label>
+                <select class="form-control-modal">
+                    <option>Pagi</option>
+                    <option>Siang</option>
+                    <option>Sore</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="grid-2-form">
+            <div class="form-group-modal">
+                <label>Sasaran penerima</label>
+                <input type="text" class="form-control-modal" placeholder="cth: Siswa SD N 1 Debong">
+            </div>
+            <div class="form-group-modal">
+                <label>Total porsi</label>
+                <input type="number" class="form-control-modal" placeholder="820">
+            </div>
+        </div>
+        
+        <div style="margin-top: 24px; margin-bottom: 16px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-bottom: 12px;">BERAT MASAK STANDAR (GRAM PER PORSI)</div>
+            
+            <div class="grid-2-form">
+                <div class="form-group-modal">
+                    <label><span class="cat-pill karbo" style="padding: 2px 8px; font-size: 10px;">Karbohidrat</span></label>
+                    <input type="number" class="form-control-modal" placeholder="250">
+                </div>
+                <div class="form-group-modal">
+                    <label><span class="cat-pill proth" style="padding: 2px 8px; font-size: 10px;">Prot. Hewani</span></label>
+                    <input type="number" class="form-control-modal" placeholder="120">
+                </div>
+            </div>
+            <div class="grid-2-form">
+                <div class="form-group-modal">
+                    <label><span class="cat-pill protn" style="padding: 2px 8px; font-size: 10px;">Prot. Nabati</span></label>
+                    <input type="number" class="form-control-modal" placeholder="—">
+                </div>
+                <div class="form-group-modal">
+                    <label><span class="cat-pill sayur" style="padding: 2px 8px; font-size: 10px;">Sayur</span></label>
+                    <input type="number" class="form-control-modal" placeholder="80">
+                </div>
+            </div>
+            <div class="grid-2-form">
+                <div class="form-group-modal">
+                    <label><span class="cat-pill buah" style="padding: 2px 8px; font-size: 10px;">Buah</span></label>
+                    <input type="number" class="form-control-modal" placeholder="—">
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
+            <button class="btn btn-outline" onclick="document.getElementById('modalMenu').classList.remove('active')">Batal</button>
+            <button class="btn btn-primary"><i class="fa-solid fa-check"></i> Simpan Menu</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

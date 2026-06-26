@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block header_title %}
+<h1>Log Sinkronisasi — Raw Data AI</h1>
+<p>Data mentah object counting dari aplikasi mobile</p>
+{% endblock %}
+
+{% block header_actions %}
+<button class="btn" style="background: var(--color-sayur-bg); color: var(--color-sayur); border: 1px solid #bbf7d0;">
+    <div class="header-dot"></div> 312 nampan hari ini
+</button>
+<button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+    .filter-group { display: flex; gap: 12px; }
+    
+    .filter-control {
+        padding: 8px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: white;
+        font-size: 13px;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+    
+    .grid-2-log { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; margin-bottom: 24px; }
+    
+    .progress-item { display: flex; align-items: center; margin-bottom: 12px; gap: 16px; }
+    .progress-item:last-child { margin-bottom: 0; }
+    .progress-label { width: 120px; font-size: 12px; font-weight: 500; }
+    .progress-bar-bg { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 4px; }
+    .progress-value { width: 40px; text-align: right; font-weight: 600; font-size: 13px; }
+    
+    .convert-card {
+        background: #f0f9ff;
+        border: 1px dashed #bae6fd;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px;
+    }
+    
+    .scan-list-log { width: 100%; }
+    .scan-item-log { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border-color); }
+    .scan-item-log:last-child { border-bottom: none; }
+    
+    .pagination { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; align-items: center; }
+    .page-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; background: white; }
+    .page-btn.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+    .page-info { font-size: 13px; color: var(--text-muted); margin-right: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-row">
+    <div class="filter-group">
+        <button class="filter-control"><i class="fa-solid fa-filter" style="color:var(--text-muted)"></i> 10/06/2026 <i class="fa-regular fa-calendar" style="margin-left:8px;color:var(--text-muted)"></i></button>
+        <select class="filter-control"><option>Semua Shift</option></select>
+        <select class="filter-control"><option>Semua Petugas</option></select>
+    </div>
+    <div class="filter-group">
+        <div class="filter-control" style="cursor:text; padding:0;">
+            <i class="fa-solid fa-magnifying-glass" style="padding-left:12px; color:var(--text-muted)"></i>
+            <input type="text" placeholder="Cari ID nampan..." style="border:none; outline:none; padding:8px; background:transparent; font-size:13px; width: 200px;">
+        </div>
+        <button class="btn btn-primary"><i class="fa-solid fa-file-export"></i> Konversi ke Form SPPG</button>
+    </div>
+</div>
+
+<div class="grid-2-log">
+    <div class="card" style="margin-bottom:0;">
+        <h3 class="card-title" style="margin-bottom: 24px;">Akumulasi item terhitung hari ini</h3>
+        
+        <div class="progress-item">
+            <div class="progress-label cat-pill karbo text-center">Karbohidrat</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 80%; background: var(--color-karbo);"></div></div>
+            <div class="progress-value" style="color: var(--color-karbo);">1.247</div>
+        </div>
+        <div class="progress-item">
+            <div class="progress-label cat-pill proth text-center">Prot. Hewani</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 50%; background: var(--color-proth);"></div></div>
+            <div class="progress-value" style="color: var(--color-proth);">906</div>
+        </div>
+        <div class="progress-item">
+            <div class="progress-label cat-pill protn text-center">Prot. Nabati</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 45%; background: var(--color-protn);"></div></div>
+            <div class="progress-value" style="color: var(--color-protn);">765</div>
+        </div>
+        <div class="progress-item">
+            <div class="progress-label cat-pill sayur text-center">Sayur</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 70%; background: var(--color-sayur);"></div></div>
+            <div class="progress-value" style="color: var(--color-sayur);">1.044</div>
+        </div>
+        <div class="progress-item">
+            <div class="progress-label cat-pill buah text-center">Buah</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 30%; background: var(--color-buah);"></div></div>
+            <div class="progress-value" style="color: var(--color-buah);">563</div>
+        </div>
+    </div>
+    
+    <div class="card convert-card" style="margin-bottom:0;">
+        <i class="fa-solid fa-arrows-spin" style="font-size:32px; color:var(--primary-blue); margin-bottom:16px;"></i>
+        <h3 style="font-size:16px; margin-bottom:8px;">Siap dikonversi ke Formulir SPPG</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:24px;">Sistem akan mengalikan item AI dengan berat standar per kategori (dari W04) lalu mengisi otomatis tabel formulir.</p>
+        <button class="btn btn-primary"><i class="fa-solid fa-file-lines"></i> Proses & Konversi Sekarang</button>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="card-title" style="margin-bottom: 4px;">Log raw data per nampan <span style="font-weight:400; font-size:13px; color:var(--text-muted); margin-left:8px;">312 entri hari ini</span></h3>
+    
+    <div class="scan-list-log" style="margin-top: 16px;">
+        {% set scans = [
+            {'id': 'NPG-0312', 'time': '14:44', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '97%'},
+            {'id': 'NPG-0311', 'time': '14:41', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '94%'},
+            {'id': 'NPG-0310', 'time': '14:38', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':2,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '91%'},
+            {'id': 'NPG-0309', 'time': '14:35', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}], 'pct': '98%'},
+            {'id': 'NPG-0308', 'time': '14:32', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}, {'n':'Sayur','q':2,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '88%'},
+            {'id': 'NPG-0307', 'time': '14:30', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '95%'},
+            {'id': 'NPG-0306', 'time': '14:27', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}], 'pct': '92%'},
+            {'id': 'NPG-0305', 'time': '14:25', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '96%'}
+        ] %}
+        
+        {% for scan in scans %}
+        <div class="scan-item-log">
+            <div style="display:flex; gap: 24px; align-items:center;">
+                <span style="font-size:13px; color:var(--text-muted); width:70px;">{{ scan.id }}</span>
+                <span style="font-size:13px; color:var(--text-muted); width:40px;">{{ scan.time }}</span>
+                <div style="display:flex; gap:8px;">
+                    {% for item in scan['items'] %}
+                    <span class="cat-pill {{ item.c }}">{{ item.n }}: {{ item.q }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div style="font-size:13px; color:var(--text-muted); font-weight:600;">{{ scan.pct }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="pagination">
+        <div class="page-info">Menampilkan 1–8 dari 312 entri</div>
+        <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+</div>
+{% endblock %}
