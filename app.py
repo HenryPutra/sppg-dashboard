@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from models import db, Karyawan, MenuHarian, ScanLog
 import json
+from datetime import datetime
 
 load_dotenv()
 
@@ -125,56 +126,50 @@ def api_login():
     if not data or 'nik' not in data or 'pin' not in data:
         return jsonify({'status': 'error', 'message': 'NIK dan PIN wajib diisi'}), 400
     
-    # Dummy authentication (bisa disesuaikan dengan database nanti)
-    if data['nik'] == 'SPG-001' and data['pin'] == '123456':
+    petugas = Karyawan.query.filter_by(nik=data['nik'], pin=data['pin'], is_active=True).first()
+    
+    if petugas:
+        petugas.last_login = datetime.now()
+        db.session.commit()
+        
         return jsonify({
             'status': 'success', 
             'message': 'Login berhasil',
             'data': {
-                'nik': 'SPG-001',
-                'nama': 'Ahmad Kurniawan',
-                'posisi': 'Petugas Dapur',
+                'nik': petugas.nik,
+                'nama': petugas.nama,
+                'posisi': petugas.posisi,
                 'token': 'dummy_jwt_token_12345'
             }
         }), 200
     else:
-        return jsonify({'status': 'error', 'message': 'NIK atau PIN salah'}), 401
+        return jsonify({'status': 'error', 'message': 'NIK atau PIN salah, atau akun tidak aktif'}), 401
 
 @app.route('/api/menu', methods=['GET'])
 def api_menu():
     """Endpoint untuk mengambil daftar menu harian dari server ke mobile"""
-    # Dummy data (diambil dari Master Menu)
-    menu_today = [
-        {
-            'id': 1,
-            'nama_menu': 'Nasi Goreng Spesial',
-            'tanggal': '2026-06-10',
-            'shift': 'Pagi',
+    today = datetime.now().date()
+    menus = MenuHarian.query.filter_by(tanggal=today).all()
+    
+    menu_data = []
+    for m in menus:
+        menu_data.append({
+            'id': m.id,
+            'nama_menu': m.nama_menu,
+            'tanggal': m.tanggal.strftime('%Y-%m-%d'),
+            'shift': m.shift,
             'komposisi_standar': {
-                'karbohidrat': 250,
-                'protein_hewani': 120,
-                'protein_nabati': 80,
-                'sayur': 80,
-                'buah': 100
+                'karbohidrat': m.karbo_gr or 0,
+                'protein_hewani': m.proth_gr or 0,
+                'protein_nabati': m.protn_gr or 0,
+                'sayur': m.sayur_gr or 0,
+                'buah': m.buah_gr or 0
             }
-        },
-        {
-            'id': 2,
-            'nama_menu': 'Nasi Ayam Bakar',
-            'tanggal': '2026-06-10',
-            'shift': 'Siang',
-            'komposisi_standar': {
-                'karbohidrat': 250,
-                'protein_hewani': 150,
-                'protein_nabati': 0,
-                'sayur': 100,
-                'buah': 0
-            }
-        }
-    ]
+        })
+        
     return jsonify({
         'status': 'success',
-        'data': menu_today
+        'data': menu_data
     }), 200
 
 @app.route('/api/scan', methods=['POST'])
@@ -184,25 +179,99 @@ def api_scan():
     if not data or 'nampan_id' not in data or 'items' not in data:
         return jsonify({'status': 'error', 'message': 'Format data tidak valid'}), 400
     
-    # Contoh Payload yang diharapkan:
-    # {
-    #   "nampan_id": "NPG-0313",
-    #   "timestamp": "2026-06-10T14:45:00Z",
-    #   "petugas_nik": "SPG-001",
-    #   "akurasi_ai": "95%",
-    #   "items": [
-    #       {"kategori": "Karbohidrat", "jumlah": 1},
-    #       {"kategori": "Protein Hewani", "jumlah": 1}
-    #   ]
-    # }
+    petugas_nik = data.get('petugas_nik')
+    timestamp_str = data.get('timestamp')
     
-    # Logika untuk menyimpan ke database harusnya ada di sini
+    try:
+        scan_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00')) if timestamp_str else datetime.now()
+    except (ValueError, AttributeError):
+        scan_time = datetime.now()
+        
+    new_scan = ScanLog(
+        nampan_id=data['nampan_id'],
+        timestamp=scan_time,
+        petugas_nik=petugas_nik,
+        items_json=json.dumps(data['items'])
+    )
+    
+    db.session.add(new_scan)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': f'Gagal menyimpan data: {str(e)}'}), 500
+        
+    return jsonify({
+        'status': 'success',
+        'message': f"Data scan untuk nampan {data['nampan_id']} berhasil diterima dan disimpan",
+        'received_items': len(data['items'])
+    }), 201
+
+@app.route('/api/dashboard', methods=['GET'])
+def api_dashboard():
+    """Endpoint untuk mengambil data dashboard untuk mobile app, bisa difilter berdasarkan petugas"""
+    nik = request.args.get('nik')
+    
+    # Base query for recent scans
+    query = ScanLog.query.order_by(ScanLog.timestamp.desc())
+    if nik:
+        query = query.filter_by(petugas_nik=nik)
+        
+    db_scans = query.limit(5).all()
+    
+    recent_scans = []
+    for s in db_scans:
+        items = json.loads(s.items_json) if s.items_json else []
+        formatted_items = []
+        for i in items:
+            name = i.get('kategori', '')
+            short_name = name
+            color = 'blue'
+            if name == 'Karbohidrat': short_name = 'Karbo'; color = 'blue'
+            elif name == 'Protein Hewani': short_name = 'Prot.H'; color = 'red'
+            elif name == 'Protein Nabati': short_name = 'Prot.N'; color = 'purple'
+            elif name == 'Sayur': short_name = 'Sayur'; color = 'green'
+            elif name == 'Buah': short_name = 'Buah'; color = 'yellow'
+            
+            formatted_items.append({'name': short_name, 'qty': i.get('jumlah', 0), 'color': color})
+            
+        recent_scans.append({
+            'id': s.nampan_id,
+            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
+            'items': formatted_items,
+            'score': '95%' # Dummy score
+        })
+
+    # Get total scanned count
+    total_query = ScanLog.query
+    if nik:
+        total_query = total_query.filter_by(petugas_nik=nik)
+    total_scanned = total_query.count()
+
+    # Using dummy data for other statistics to match the web dashboard
+    data = {
+        'total_value': 'Rp 1,24 jt',
+        'value_change': '+ 14% vs kemarin',
+        'total_waste': '54,7 kg',
+        'waste_change': '+ 7,3 kg',
+        'most_wasted': 'Protein Hewani',
+        'most_wasted_desc': 'Sisa rata-rata 17%',
+        'total_scanned': str(total_scanned),
+        'scanned_desc': 'Sinkron mobile',
+        'categories': [
+            {'name': 'Karbohidrat', 'sisa_kg': 12.4, 'persen': 7.1, 'status': 'Normal', 'color': 'blue'},
+            {'name': 'Protein Hewani', 'sisa_kg': 18.6, 'persen': 17.0, 'status': 'Kritis', 'color': 'red'},
+            {'name': 'Protein Nabati', 'sisa_kg': 9.3, 'persen': 12.4, 'status': 'Perhatian', 'color': 'purple'},
+            {'name': 'Sayur', 'sisa_kg': 11.0, 'persen': 11.8, 'status': 'Perhatian', 'color': 'green'},
+            {'name': 'Buah', 'sisa_kg': 3.4, 'persen': 8.3, 'status': 'Normal', 'color': 'yellow'}
+        ],
+        'recent_scans': recent_scans
+    }
     
     return jsonify({
         'status': 'success',
-        'message': f"Data scan untuk nampan {data['nampan_id']} berhasil diterima",
-        'received_items': len(data['items'])
-    }), 201
+        'data': data
+    }), 200
 
 # --- END OF API ENDPOINTS ---
 

@@ -14,6 +14,9 @@ class Karyawan(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime, nullable=True)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
 class MenuHarian(db.Model):
     __tablename__ = 'menu_harian'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -28,6 +31,9 @@ class MenuHarian(db.Model):
     sayur_gr = db.Column(db.Integer)
     buah_gr = db.Column(db.Integer)
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
 class ScanLog(db.Model):
     __tablename__ = 'scan_log'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -35,6 +41,10 @@ class ScanLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     petugas_nik = db.Column(db.String(20), db.ForeignKey('karyawan.nik'))
     items_json = db.Column(db.Text) # Storing JSON string for simplicity
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     
     @property
     def items(self):
