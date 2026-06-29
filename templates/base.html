@@ -11,75 +11,125 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h2>SPPG Debong Kulon</h2>
-            <p>Yayasan Kelud Insan Mandiri<br>Portal Akuntan - 2026</p>
-        </div>
-        
-        <nav class="sidebar-menu">
-            <div class="menu-section">UTAMA</div>
-            <ul>
-                <li class="{% if request.path == '/dashboard' %}active{% endif %}">
-                    <a href="/dashboard"><i class="fa-solid fa-border-all"></i> Dashboard</a>
-                </li>
-                <li class="{% if request.path == '/formulir' %}active{% endif %}">
-                    <a href="/formulir"><i class="fa-regular fa-clipboard"></i> Formulir SPPG</a>
-                </li>
-                <li class="{% if request.path == '/log-sinkronisasi' %}active{% endif %}">
-                    <a href="/log-sinkronisasi"><i class="fa-solid fa-clock-rotate-left"></i> Log Sinkronisasi</a>
-                </li>
-            </ul>
-
-            <div class="menu-section">PENGATURAN</div>
-            <ul>
-                <li class="{% if request.path == '/pengaturan' %}active{% endif %}">
-                    <a href="/pengaturan"><i class="fa-solid fa-sliders"></i> Konversi & Toleransi</a>
-                </li>
-                <li class="{% if request.path == '/master-menu' %}active{% endif %}">
-                    <a href="/master-menu"><i class="fa-solid fa-list"></i> Master Menu</a>
-                </li>
-                <li class="{% if request.path == '/karyawan' %}active{% endif %}">
-                    <a href="/karyawan"><i class="fa-solid fa-users"></i> Karyawan & Petugas</a>
-                </li>
-            </ul>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-avatar">AK</div>
-            <div class="user-info">
-                <h4>Ayu Krisanti</h4>
-                <p>Akuntan SPPG</p>
+    <div style="display: flex;">
+        <nav class="sidebar" id="sidebar">
+            <script>if(localStorage.getItem('sidebar_collapsed') === 'true') document.getElementById('sidebar').classList.add('collapsed');</script>
+            <div class="sidebar-logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" style="width: 40px; height: 40px; margin-right: 12px; object-fit: contain;" class="logo-icon-img">
+                <div class="logo-text" style="font-weight: 700; font-size: 20px;">SPPG</div>
             </div>
-        </div>
-    </aside>
+            
+            <div class="sidebar-menu">
+                <div class="menu-section">UTAMA</div>
+                <ul>
+                    <li class="{% if request.path == '/dashboard' %}active{% endif %}">
+                        <a href="/dashboard"><i class="fa-solid fa-border-all"></i> <span>Dashboard</span></a>
+                    </li>
+                    <li class="{% if request.path == '/formulir' %}active{% endif %}">
+                        <a href="/formulir"><i class="fa-regular fa-clipboard"></i> <span>Formulir SPPG</span></a>
+                    </li>
+                    <li class="{% if request.path == '/log-sinkronisasi' %}active{% endif %}">
+                        <a href="/log-sinkronisasi"><i class="fa-solid fa-clock-rotate-left"></i> <span>Log Sinkronisasi</span></a>
+                    </li>
+                </ul>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <header class="top-header">
-            <div class="header-title">
-                {% block header_title %}
-                <h1>Dashboard Overview</h1>
-                <p>Selasa, 10 Jun 2026 • Shift Pagi & Siang</p>
-                {% endblock %}
+                <div class="menu-section">PENGATURAN</div>
+                <ul>
+                    <li class="{% if request.path == '/pengaturan' %}active{% endif %}">
+                        <a href="/pengaturan"><i class="fa-solid fa-sliders"></i> <span>Konversi & Toleransi</span></a>
+                    </li>
+                    <li class="{% if request.path == '/master-menu' %}active{% endif %}">
+                        <a href="/master-menu"><i class="fa-solid fa-list"></i> <span>Master Menu</span></a>
+                    </li>
+                    <li class="{% if request.path == '/karyawan' %}active{% endif %}">
+                        <a href="/karyawan"><i class="fa-solid fa-users"></i> <span>Karyawan & Petugas</span></a>
+                    </li>
+                </ul>
             </div>
-            <div class="header-actions">
-                {% block header_actions %}
-                <button class="btn btn-outline" style="color: var(--color-proth); border-color: #fecaca; background: #fef2f2;">
-                    <i class="fa-solid fa-triangle-exclamation"></i> 2 Peringatan
+            
+            <div class="sidebar-footer" style="margin-top: auto; padding: 24px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button id="sidebar-toggle-btn" style="background: transparent; border: none; color: var(--sidebar-text); cursor: pointer; width: 100%; text-align: left; display: flex; align-items: center; gap: 12px; font-size: 14px;">
+                    <i class="fa-solid fa-chevron-left" id="toggle-icon"></i> <span id="toggle-text">Tutup Menu</span>
                 </button>
-                <button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
-                <button class="btn-icon"><i class="fa-solid fa-arrow-rotate-right"></i></button>
-                {% endblock %}
             </div>
-        </header>
+        </nav>
+        
+        <div class="mobile-overlay" id="mobileOverlay"></div>
 
-        <div class="content-wrapper">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
+        <main class="main-content" id="mainContent">
+            <script>if(localStorage.getItem('sidebar_collapsed') === 'true') document.getElementById('mainContent').classList.add('collapsed-margin');</script>
+            <header class="top-header">
+                <div style="display: flex; align-items: center;">
+                    <button id="mobile-menu-btn" class="btn btn-outline" style="display: none; padding: 8px 12px; margin-right: 16px;"><i class="fa-solid fa-bars"></i></button>
+                    <div class="header-title">
+                        {% block header_title %}
+                        <h1>Dashboard Overview</h1>
+                        <p>Selasa, 10 Jun 2026 • Shift Pagi & Siang</p>
+                        {% endblock %}
+                    </div>
+                </div>
+                <div class="header-actions">
+                    {% block header_actions %}
+                    <button class="btn btn-outline" style="color: var(--color-proth); border-color: #fecaca; background: #fef2f2;">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 2 Peringatan
+                    </button>
+                    <button class="btn-icon"><i class="fa-regular fa-bell"></i></button>
+                    <button class="btn-icon"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                    {% endblock %}
+                </div>
+            </header>
 
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Sidebar Toggle Logic for Desktop
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.getElementById('mainContent');
+        const toggleBtn = document.getElementById('sidebar-toggle-btn');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+
+        // Update icon based on state
+        function updateToggleIcon() {
+            if (sidebar.classList.contains('collapsed')) {
+                toggleIcon.classList.remove('fa-chevron-left');
+                toggleIcon.classList.add('fa-chevron-right');
+            } else {
+                toggleIcon.classList.remove('fa-chevron-right');
+                toggleIcon.classList.add('fa-chevron-left');
+            }
+        }
+        
+        // Initial icon update
+        updateToggleIcon();
+
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('collapsed-margin');
+            
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebar_collapsed', isCollapsed);
+            
+            updateToggleIcon();
+        });
+
+        // Mobile Menu Logic
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.add('mobile-open');
+            mobileOverlay.classList.add('active');
+        });
+
+        mobileOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('mobile-open');
+            mobileOverlay.classList.remove('active');
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

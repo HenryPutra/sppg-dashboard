@@ -86,80 +86,37 @@
                 </tr>
             </thead>
             <tbody>
+                {% for kar in karyawans %}
                 <tr>
-                    <td style="color: var(--text-muted);">SPG-001</td>
-                    <td>Ahmad Kurniawan</td>
-                    <td>Petugas Dapur</td>
-                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
+                    <td style="color: var(--text-muted);">{{ kar.nik }}</td>
+                    <td>{{ kar.nama }}</td>
+                    <td>{{ kar.posisi }}</td>
+                    <td><span class="shift-badge shift-{{ kar.shift_dominan.lower() }}">{{ kar.shift_dominan }}</span></td>
                     <td>
                         <label class="toggle-switch-sm">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" {% if kar.is_active %}checked{% endif %}>
                             <span class="slider-sm"></span>
                         </label>
                     </td>
-                    <td style="color: var(--text-muted); font-weight: 400;">10 Jun - 08:42</td>
+                    <td style="color: var(--text-muted); font-weight: 400;">
+                        {% if kar.last_login %}
+                            {{ kar.last_login.strftime('%d %b - %H:%M') }}
+                        {% else %}
+                            Belum pernah login
+                        {% endif %}
+                    </td>
                     <td style="background: #f8fafc;">
                         <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
                         <button class="table-action-btn btn-reset"><i class="fa-solid fa-key"></i> Reset PIN</button>
                     </td>
                 </tr>
-                <tr>
-                    <td style="color: var(--text-muted);">SPG-002</td>
-                    <td>Rina Sulistyowati</td>
-                    <td>Pengawas Gizi</td>
-                    <td><span class="shift-badge shift-siang">Siang</span></td>
-                    <td>
-                        <label class="toggle-switch-sm">
-                            <input type="checkbox" checked>
-                            <span class="slider-sm"></span>
-                        </label>
-                    </td>
-                    <td style="color: var(--text-muted); font-weight: 400;">10 Jun - 11:16</td>
-                    <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-reset"><i class="fa-solid fa-key"></i> Reset PIN</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text-muted);">SPG-003</td>
-                    <td>Dodi Rahmat</td>
-                    <td>Petugas Dapur</td>
-                    <td><span class="shift-badge shift-sore">Sore</span></td>
-                    <td>
-                        <label class="toggle-switch-sm">
-                            <input type="checkbox" checked>
-                            <span class="slider-sm"></span>
-                        </label>
-                    </td>
-                    <td style="color: var(--text-muted); font-weight: 400;">10 Jun - 14:07</td>
-                    <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-reset"><i class="fa-solid fa-key"></i> Reset PIN</button>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="color: var(--text-muted);">SPG-004</td>
-                    <td>Siti Nurazizah</td>
-                    <td>Koordinator</td>
-                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
-                    <td>
-                        <label class="toggle-switch-sm">
-                            <input type="checkbox">
-                            <span class="slider-sm"></span>
-                        </label>
-                    </td>
-                    <td style="color: var(--text-muted); font-weight: 400;">05 Jun - 09:30</td>
-                    <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-reset"><i class="fa-solid fa-key"></i> Reset PIN</button>
-                    </td>
-                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px; color: var(--text-muted);">
-        <div>Menampilkan 1–4 dari 12 karyawan</div>
+        <div>Menampilkan 1–{{ karyawans|length }} dari {{ karyawans|length }} karyawan</div>
     </div>
 </div>
 

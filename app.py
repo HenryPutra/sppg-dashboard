@@ -2,6 +2,7 @@ import os
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 from models import db, Karyawan, MenuHarian, ScanLog
+import json
 
 load_dotenv()
 
@@ -26,7 +27,31 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
-    # Pass some dummy data to simulate the dashboard
+    # Fetch recent scans from DB
+    db_scans = ScanLog.query.order_by(ScanLog.timestamp.desc()).limit(5).all()
+    recent_scans = []
+    for s in db_scans:
+        items = json.loads(s.items_json) if s.items_json else []
+        formatted_items = []
+        for i in items:
+            name = i.get('kategori', '')
+            short_name = name
+            color = 'blue'
+            if name == 'Karbohidrat': short_name = 'Karbo'; color = 'blue'
+            elif name == 'Protein Hewani': short_name = 'Prot.H'; color = 'red'
+            elif name == 'Protein Nabati': short_name = 'Prot.N'; color = 'purple'
+            elif name == 'Sayur': short_name = 'Sayur'; color = 'green'
+            elif name == 'Buah': short_name = 'Buah'; color = 'yellow'
+            
+            formatted_items.append({'name': short_name, 'qty': i.get('jumlah', 0), 'color': color})
+            
+        recent_scans.append({
+            'id': s.nampan_id,
+            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
+            'items': formatted_items,
+            'score': '95%' # Dummy score
+        })
+
     data = {
         'total_value': 'Rp 1,24 jt',
         'value_change': '+ 14% vs kemarin',
@@ -43,24 +68,39 @@ def dashboard():
             {'name': 'Sayur', 'sisa_kg': 11.0, 'persen': 11.8, 'status': 'Perhatian', 'color': 'green'},
             {'name': 'Buah', 'sisa_kg': 3.4, 'persen': 8.3, 'status': 'Normal', 'color': 'yellow'}
         ],
-        'recent_scans': [
-            {'id': 'NPG-0312', 'time': '14:44', 'items': [{'name': 'Karbo', 'qty': 1, 'color': 'blue'}, {'name': 'Prot.H', 'qty': 1, 'color': 'red'}, {'name': 'Sayur', 'qty': 1, 'color': 'green'}, {'name': 'Buah', 'qty': 1, 'color': 'yellow'}], 'score': '97%'},
-            {'id': 'NPG-0311', 'time': '14:41', 'items': [{'name': 'Karbo', 'qty': 1, 'color': 'blue'}, {'name': 'Prot.N', 'qty': 1, 'color': 'purple'}, {'name': 'Sayur', 'qty': 1, 'color': 'green'}], 'score': '94%'},
-            {'id': 'NPG-0310', 'time': '14:38', 'items': [{'name': 'Karbo', 'qty': 1, 'color': 'blue'}, {'name': 'Prot.H', 'qty': 2, 'color': 'red'}, {'name': 'Sayur', 'qty': 1, 'color': 'green'}], 'score': '91%'},
-            {'id': 'NPG-0309', 'time': '14:35', 'items': [{'name': 'Karbo', 'qty': 1, 'color': 'blue'}, {'name': 'Prot.H', 'qty': 1, 'color': 'red'}], 'score': '98%'},
-            {'id': 'NPG-0308', 'time': '14:32', 'items': [{'name': 'Karbo', 'qty': 1, 'color': 'blue'}, {'name': 'Prot.N', 'qty': 1, 'color': 'purple'}, {'name': 'Sayur', 'qty': 2, 'color': 'green'}, {'name': 'Buah', 'qty': 1, 'color': 'yellow'}], 'score': '88%'},
-        ]
+        'recent_scans': recent_scans
     }
     return render_template('dashboard.html', data=data)
 
 @app.route('/formulir')
 def formulir():
-    # Dummy data for formulir table
     return render_template('formulir.html')
 
 @app.route('/log-sinkronisasi')
 def log_sinkronisasi():
-    return render_template('log.html')
+    db_scans = ScanLog.query.order_by(ScanLog.timestamp.desc()).all()
+    scans = []
+    for s in db_scans:
+        items = json.loads(s.items_json) if s.items_json else []
+        formatted_items = []
+        for i in items:
+            name = i.get('kategori', '')
+            short_name = name
+            c = 'karbo'
+            if name == 'Karbohidrat': short_name = 'Karbo'; c = 'karbo'
+            elif name == 'Protein Hewani': short_name = 'Prot.H'; c = 'proth'
+            elif name == 'Protein Nabati': short_name = 'Prot.N'; c = 'protn'
+            elif name == 'Sayur': short_name = 'Sayur'; c = 'sayur'
+            elif name == 'Buah': short_name = 'Buah'; c = 'buah'
+            formatted_items.append({'n': short_name, 'q': i.get('jumlah', 0), 'c': c})
+            
+        scans.append({
+            'id': s.nampan_id,
+            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
+            'items': formatted_items,
+            'pct': '95%'
+        })
+    return render_template('log.html', scans=scans)
 
 @app.route('/pengaturan')
 def pengaturan():
@@ -68,11 +108,13 @@ def pengaturan():
 
 @app.route('/master-menu')
 def master_menu():
-    return render_template('master_menu.html')
+    menus = MenuHarian.query.order_by(MenuHarian.tanggal.desc()).all()
+    return render_template('master_menu.html', menus=menus)
 
 @app.route('/karyawan')
 def karyawan():
-    return render_template('karyawan.html')
+    karyawans = Karyawan.query.all()
+    return render_template('karyawan.html', karyawans=karyawans)
 
 # --- API ENDPOINTS UNTUK APLIKASI MOBILE (SIGIZA) ---
 

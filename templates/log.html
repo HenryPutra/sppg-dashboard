@@ -36,7 +36,11 @@
     .progress-item:last-child { margin-bottom: 0; }
     .progress-label { width: 120px; font-size: 12px; font-weight: 500; }
     .progress-bar-bg { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; border-radius: 4px; }
+    @keyframes fillBar {
+        from { max-width: 0; }
+        to { max-width: 100%; }
+    }
+    .progress-bar-fill { height: 100%; border-radius: 4px; animation: fillBar 1.5s ease-out forwards; }
     .progress-value { width: 40px; text-align: right; font-weight: 600; font-size: 13px; }
     
     .convert-card {
@@ -117,20 +121,10 @@
 </div>
 
 <div class="card">
-    <h3 class="card-title" style="margin-bottom: 4px;">Log raw data per nampan <span style="font-weight:400; font-size:13px; color:var(--text-muted); margin-left:8px;">312 entri hari ini</span></h3>
+    <h3 class="card-title" style="margin-bottom: 4px;">Log raw data per nampan <span style="font-weight:400; font-size:13px; color:var(--text-muted); margin-left:8px;">{{ scans|length }} entri hari ini</span></h3>
     
     <div class="scan-list-log" style="margin-top: 16px;">
-        {% set scans = [
-            {'id': 'NPG-0312', 'time': '14:44', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '97%'},
-            {'id': 'NPG-0311', 'time': '14:41', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '94%'},
-            {'id': 'NPG-0310', 'time': '14:38', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':2,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '91%'},
-            {'id': 'NPG-0309', 'time': '14:35', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}], 'pct': '98%'},
-            {'id': 'NPG-0308', 'time': '14:32', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}, {'n':'Sayur','q':2,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '88%'},
-            {'id': 'NPG-0307', 'time': '14:30', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}], 'pct': '95%'},
-            {'id': 'NPG-0306', 'time': '14:27', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.N','q':1,'c':'protn'}], 'pct': '92%'},
-            {'id': 'NPG-0305', 'time': '14:25', 'items': [{'n':'Karbo','q':1,'c':'karbo'}, {'n':'Prot.H','q':1,'c':'proth'}, {'n':'Sayur','q':1,'c':'sayur'}, {'n':'Buah','q':1,'c':'buah'}], 'pct': '96%'}
-        ] %}
-        
+
         {% for scan in scans %}
         <div class="scan-item-log">
             <div style="display:flex; gap: 24px; align-items:center;">
@@ -148,7 +142,7 @@
     </div>
 
     <div class="pagination">
-        <div class="page-info">Menampilkan 1–8 dari 312 entri</div>
+        <div class="page-info">Menampilkan 1–{{ scans|length }} dari {{ scans|length }} entri</div>
         <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
         <button class="page-btn active">1</button>
         <button class="page-btn">2</button>

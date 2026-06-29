@@ -105,7 +105,20 @@
                 <tr>
                     <td><span class="cat-pill {{ item.name.split(' ')[0].lower() }}{% if item.name == 'Protein Hewani' %} proth{% elif item.name == 'Protein Nabati' %} protn{% endif %}" style="width: 110px; text-align: center;">{{ item.name }}</span></td>
                     <td>{{ "%.1f"|format(item.sisa_kg) | replace('.', ',') }}</td>
-                    <td>{{ "%.1f"|format(item.persen) | replace('.', ',') }}%</td>
+                    <td style="width: 150px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 36px; font-weight: 500;">{{ "%.1f"|format(item.persen) | replace('.', ',') }}%</div>
+                            <div class="progress-bar-bg" style="width: 80px;">
+                                {% set bg = 'var(--color-buah)' %}
+                                {% if item.name == 'Karbohidrat' %}{% set bg = 'var(--color-karbo)' %}{% endif %}
+                                {% if item.name == 'Protein Hewani' %}{% set bg = 'var(--color-proth)' %}{% endif %}
+                                {% if item.name == 'Protein Nabati' %}{% set bg = 'var(--color-protn)' %}{% endif %}
+                                {% if item.name == 'Sayur' %}{% set bg = 'var(--color-sayur)' %}{% endif %}
+                                {% set style_attr = 'style="width: ' ~ item.persen|string ~ '%; background: ' ~ bg ~ ';"' %}
+                                <div class="progress-bar-fill" {{ style_attr | safe }}></div>
+                            </div>
+                        </div>
+                    </td>
                     <td><span class="badge {{ item.status.lower() }}">{{ item.status }}</span></td>
                 </tr>
                 {% endfor %}
@@ -172,6 +185,15 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: {
+                y: {
+                    duration: 2000,
+                    easing: 'easeOutQuart',
+                    delay: function(context) {
+                        return context.dataIndex * 250;
+                    }
+                }
+            },
             plugins: {
                 legend: { display: false },
                 annotation: {

@@ -89,60 +89,30 @@
                 </tr>
             </thead>
             <tbody>
+                {% for menu in menus %}
                 <tr>
-                    <td>10/06/2026</td>
-                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
-                    <td style="font-weight: 500;">Nasi Goreng Spesial</td>
-                    <td>Siswa SD N 1 Debong</td>
-                    <td>820</td>
-                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
-                    <td style="color: var(--color-proth); font-weight: 500;">120</td>
-                    <td style="color: var(--color-protn); font-weight: 500;">80</td>
-                    <td style="color: var(--color-sayur); font-weight: 500;">80</td>
-                    <td style="color: #ca8a04; font-weight: 500;">100</td>
+                    <td>{{ menu.tanggal.strftime('%d/%m/%Y') }}</td>
+                    <td><span class="shift-badge shift-{{ menu.shift.lower() }}">{{ menu.shift }}</span></td>
+                    <td style="font-weight: 500;">{{ menu.nama_menu }}</td>
+                    <td>{{ menu.sasaran }}</td>
+                    <td>{{ menu.total_porsi }}</td>
+                    <td style="color: var(--color-karbo); font-weight: 500;">{{ menu.karbo_gr if menu.karbo_gr else '—' }}</td>
+                    <td style="color: var(--color-proth); font-weight: 500;">{{ menu.proth_gr if menu.proth_gr else '—' }}</td>
+                    <td {% if menu.protn_gr %}style="color: var(--color-protn); font-weight: 500;"{% else %}style="color: var(--text-muted);"{% endif %}>{{ menu.protn_gr if menu.protn_gr else '—' }}</td>
+                    <td {% if menu.sayur_gr %}style="color: var(--color-sayur); font-weight: 500;"{% else %}style="color: var(--text-muted);"{% endif %}>{{ menu.sayur_gr if menu.sayur_gr else '—' }}</td>
+                    <td {% if menu.buah_gr %}style="color: #ca8a04; font-weight: 500;"{% else %}style="color: var(--text-muted);"{% endif %}>{{ menu.buah_gr if menu.buah_gr else '—' }}</td>
                     <td style="background: #f8fafc;">
                         <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
                         <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
-                <tr>
-                    <td>10/06/2026</td>
-                    <td><span class="shift-badge shift-siang">Siang</span></td>
-                    <td style="font-weight: 500;">Nasi Ayam Bakar</td>
-                    <td>Siswa SD N 1 Debong</td>
-                    <td>820</td>
-                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
-                    <td style="color: var(--color-proth); font-weight: 500;">150</td>
-                    <td style="color: var(--text-muted);">—</td>
-                    <td style="color: var(--color-sayur); font-weight: 500;">100</td>
-                    <td style="color: var(--text-muted);">—</td>
-                    <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>09/06/2026</td>
-                    <td><span class="shift-badge shift-pagi">Pagi</span></td>
-                    <td style="font-weight: 500;">Nasi Ikan + Tempe</td>
-                    <td>Siswa SD N 1 Debong</td>
-                    <td>820</td>
-                    <td style="color: var(--color-karbo); font-weight: 500;">250</td>
-                    <td style="color: var(--color-proth); font-weight: 500;">100</td>
-                    <td style="color: var(--color-protn); font-weight: 500;">80</td>
-                    <td style="color: var(--color-sayur); font-weight: 500;">80</td>
-                    <td style="color: #ca8a04; font-weight: 500;">100</td>
-                    <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12px; color: var(--text-muted);">
-        <div>Menampilkan 1–3 dari 3 menu hari ini</div>
+        <div>Menampilkan 1–{{ menus|length }} dari {{ menus|length }} menu hari ini</div>
         <a href="#" style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">Lihat riwayat menu</a>
     </div>
 </div>
