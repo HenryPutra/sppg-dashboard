@@ -128,58 +128,98 @@
             <button class="btn-close" onclick="document.getElementById('modalKaryawan').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
-        <div class="grid-2-form">
+        <form id="formTambahKaryawan">
+            <div class="grid-2-form">
+                <div class="form-group-modal">
+                    <label>NIK Karyawan</label>
+                    <input type="text" id="inputNik" class="form-control-modal" placeholder="Contoh: SPG-013" required>
+                </div>
+                <div class="form-group-modal">
+                    <label>Posisi</label>
+                    <select id="inputPosisi" class="form-control-modal">
+                        <option>Petugas Dapur</option>
+                        <option>Pengawas Gizi</option>
+                        <option>Koordinator</option>
+                    </select>
+                </div>
+            </div>
+            
             <div class="form-group-modal">
-                <label>NIK Karyawan</label>
-                <input type="text" class="form-control-modal" value="SPG-013">
+                <label>Nama Lengkap</label>
+                <input type="text" id="inputNama" class="form-control-modal" placeholder="Nama sesuai KTP" required>
             </div>
-            <div class="form-group-modal">
-                <label>Posisi</label>
-                <select class="form-control-modal">
-                    <option>Petugas Dapur</option>
-                    <option>Pengawas Gizi</option>
-                    <option>Koordinator</option>
-                </select>
+            
+            <div class="grid-2-form">
+                <div class="form-group-modal">
+                    <label>Shift Dominan</label>
+                    <select id="inputShift" class="form-control-modal">
+                        <option>Pagi</option>
+                        <option>Siang</option>
+                        <option>Sore</option>
+                    </select>
+                </div>
+                <div class="form-group-modal">
+                    <label>No. HP</label>
+                    <input type="text" id="inputHp" class="form-control-modal" placeholder="08xx-xxxx-xxxx">
+                </div>
             </div>
-        </div>
-        
-        <div class="form-group-modal">
-            <label>Nama Lengkap</label>
-            <input type="text" class="form-control-modal" placeholder="Nama sesuai KTP">
-        </div>
-        
-        <div class="grid-2-form">
-            <div class="form-group-modal">
-                <label>Shift Dominan</label>
-                <select class="form-control-modal">
-                    <option>Pagi</option>
-                    <option>Siang</option>
-                    <option>Sore</option>
-                </select>
+            
+            <div style="margin-top: 24px; margin-bottom: 24px;">
+                <div style="font-size: 12px; font-weight: 500; color: var(--text-main); margin-bottom: 8px;">PIN login mobile (6 digit)</div>
+                <input type="text" id="inputPin" class="form-control-modal" placeholder="123456" maxlength="6" pattern="\d{6}" style="letter-spacing: 12px; text-align: center; font-size: 24px; font-weight: bold; height: 48px; background: #f8fafc;" required>
+                <div style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 8px;">PIN digunakan karyawan untuk login di aplikasi mobile SPPG</div>
             </div>
-            <div class="form-group-modal">
-                <label>No. HP</label>
-                <input type="text" class="form-control-modal" placeholder="08xx-xxxx-xxxx">
+            
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('modalKaryawan').classList.remove('active')">Batal</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Buat Akun</button>
             </div>
-        </div>
-        
-        <div style="margin-top: 24px; margin-bottom: 24px;">
-            <div style="font-size: 12px; font-weight: 500; color: var(--text-main); margin-bottom: 8px;">PIN login mobile (6 digit)</div>
-            <div class="pin-boxes">
-                <div class="pin-box">•</div>
-                <div class="pin-box">•</div>
-                <div class="pin-box">•</div>
-                <div class="pin-box">•</div>
-                <div class="pin-box">•</div>
-                <div class="pin-box">•</div>
-            </div>
-            <div style="text-align: center; font-size: 11px; color: var(--text-muted);">PIN digunakan karyawan untuk login di aplikasi mobile SPPG</div>
-        </div>
-        
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
-            <button class="btn btn-outline" onclick="document.getElementById('modalKaryawan').classList.remove('active')">Batal</button>
-            <button class="btn btn-primary"><i class="fa-solid fa-check"></i> Buat Akun</button>
-        </div>
+        </form>
     </div>
 </div>
+
+<script>
+document.getElementById('formTambahKaryawan').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const data = {
+        nik: document.getElementById('inputNik').value,
+        nama: document.getElementById('inputNama').value,
+        posisi: document.getElementById('inputPosisi').value,
+        shift_dominan: document.getElementById('inputShift').value,
+        pin: document.getElementById('inputPin').value
+    };
+    
+    // Disable button to prevent double submit
+    const btnSubmit = this.querySelector('button[type="submit"]');
+    const originalText = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    btnSubmit.disabled = true;
+    
+    fetch('/api/karyawan/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.status === 'success') {
+            alert(result.message);
+            window.location.reload();
+        } else {
+            alert('Gagal: ' + result.message);
+            btnSubmit.innerHTML = originalText;
+            btnSubmit.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan sistem.');
+        btnSubmit.innerHTML = originalText;
+        btnSubmit.disabled = false;
+    });
+});
+</script>
 {% endblock %}

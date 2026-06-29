@@ -117,6 +117,35 @@ def karyawan():
     karyawans = Karyawan.query.all()
     return render_template('karyawan.html', karyawans=karyawans)
 
+@app.route('/api/karyawan/add', methods=['POST'])
+def add_karyawan():
+    try:
+        data = request.get_json()
+        if not data or not data.get('nik') or not data.get('nama'):
+            return jsonify({'status': 'error', 'message': 'NIK dan Nama wajib diisi'}), 400
+        
+        # Cek apakah NIK sudah ada
+        existing = Karyawan.query.filter_by(nik=data['nik']).first()
+        if existing:
+            return jsonify({'status': 'error', 'message': 'NIK sudah terdaftar'}), 400
+            
+        new_karyawan = Karyawan(
+            nik=data['nik'],
+            nama=data['nama'],
+            posisi=data.get('posisi', 'Petugas Dapur'),
+            shift_dominan=data.get('shift_dominan', 'Pagi'),
+            pin=data.get('pin', '123456'),
+            is_active=True,
+            last_login=None
+        )
+        
+        db.session.add(new_karyawan)
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Karyawan berhasil ditambahkan'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 # --- API ENDPOINTS UNTUK APLIKASI MOBILE (SIGIZA) ---
 
 @app.route('/api/login', methods=['POST'])
