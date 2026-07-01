@@ -1,39 +1,75 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+from functools import wraps
 from dotenv import load_dotenv
-from models import db, Karyawan, MenuHarian, ScanLog
+from models import Karyawan, MenuHarian, ScanLog
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'super-secret-key-123')
 
-# Use DATABASE_URL from environment if available (for Render/Supabase), otherwise fallback to local SQLite
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///sppg_local.db')
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-db.init_app(app)
+# Initialize Firebase
+try:
+    cred = credentials.Certificate('serviceAccountKey.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+except Exception as e:
+    print(f"Warning: Firebase initialization failed. Make sure serviceAccountKey.json exists. Error: {e}")
+    db = None
 
-# Buat tabel jika belum ada (sementara taruh di sini, untuk production biasanya pakai Flask-Migrate)
-with app.app_context():
-    db.create_all()
 
-@app.route('/')
-def login():
-    return render_template('login.html')
-
-@app.route('/dashboard')
-def dashboard():
-    # Fetch recent scans from DB
-    db_scans = ScanLog.query.order_by(ScanLog.timestamp.desc()).limit(5).all()
+def calculate_dashboard_stats(nik=None):
+    if not db:
+        return {}
+        
+    query = db.collection('scan_log')
+    if nik:
+        query = query.where('petugas_nik', '==', nik)
+        
+    all_scans = [ScanLog.from_dict(doc.to_dict(), doc_id=doc.id) for doc in query.stream()]
+    all_scans.sort(key=lambda x: x.timestamp, reverse=True)
+    
+    recent_scans_raw = all_scans[:5]
+    
+    # Fetch settings
+    settings = {}
+    if db:
+        docs = db.collection('pengaturan').limit(1).stream()
+        for doc in docs:
+            settings = doc.to_dict()
+            break
+            
+    cat_weights = {
+        'Karbohidrat': int(settings.get('berat_karbo', 250)) / 1000,
+        'Protein Hewani': int(settings.get('berat_proth', 120)) / 1000,
+        'Protein Nabati': int(settings.get('berat_protn', 80)) / 1000,
+        'Sayur': int(settings.get('berat_sayur', 80)) / 1000,
+        'Buah': int(settings.get('berat_buah', 100)) / 1000,
+    }
+    
+    tol_normal = int(settings.get('tol_normal', 10))
+    tol_kritis = int(settings.get('tol_kritis', 15))
+    
+    # Format recent scans
     recent_scans = []
-    for s in db_scans:
+    for s in recent_scans_raw:
         items = json.loads(s.items_json) if s.items_json else []
         formatted_items = []
+        scan_total_items = 0
         for i in items:
             name = i.get('kategori', '')
             short_name = name
@@ -44,48 +80,239 @@ def dashboard():
             elif name == 'Sayur': short_name = 'Sayur'; color = 'green'
             elif name == 'Buah': short_name = 'Buah'; color = 'yellow'
             
-            formatted_items.append({'name': short_name, 'qty': i.get('jumlah', 0), 'color': color})
+            qty = i.get('jumlah', 0)
+            scan_total_items += qty
+            formatted_items.append({'name': short_name, 'qty': qty, 'color': color})
             
+        score = 100 - (scan_total_items * 5) # simple score heuristic
+        if score < 0: score = 0
         recent_scans.append({
             'id': s.nampan_id,
-            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
+            'time': s.timestamp.strftime('%H:%M') if s.timestamp and isinstance(s.timestamp, datetime) else '',
             'items': formatted_items,
-            'score': '95%' # Dummy score
+            'score': f'{score}%'
         })
-
-    data = {
-        'total_value': 'Rp 1,24 jt',
-        'value_change': '+ 14% vs kemarin',
-        'total_waste': '54,7 kg',
-        'waste_change': '+ 7,3 kg',
-        'most_wasted': 'Protein Hewani',
-        'most_wasted_desc': 'Sisa rata-rata 17%',
-        'total_scanned': '312',
-        'scanned_desc': 'Sinkron mobile',
-        'categories': [
-            {'name': 'Karbohidrat', 'sisa_kg': 12.4, 'persen': 7.1, 'status': 'Normal', 'color': 'blue'},
-            {'name': 'Protein Hewani', 'sisa_kg': 18.6, 'persen': 17.0, 'status': 'Kritis', 'color': 'red'},
-            {'name': 'Protein Nabati', 'sisa_kg': 9.3, 'persen': 12.4, 'status': 'Perhatian', 'color': 'purple'},
-            {'name': 'Sayur', 'sisa_kg': 11.0, 'persen': 11.8, 'status': 'Perhatian', 'color': 'green'},
-            {'name': 'Buah', 'sisa_kg': 3.4, 'persen': 8.3, 'status': 'Normal', 'color': 'yellow'}
-        ],
-        'recent_scans': recent_scans
+        
+    # Calculate stats
+    total_scanned = len(all_scans)
+    value_per_kg = 50000 # Asumsi Rp 50.000 per kg sisa
+    
+    cat_counts = {
+        'Karbohidrat': 0, 'Protein Hewani': 0, 'Protein Nabati': 0, 'Sayur': 0, 'Buah': 0
     }
+    
+    for s in all_scans:
+        items = json.loads(s.items_json) if s.items_json else []
+        for i in items:
+            cat = i.get('kategori')
+            qty = i.get('jumlah', 0)
+            if cat in cat_counts:
+                cat_counts[cat] += qty
+                
+    total_items = sum(cat_counts.values())
+    total_waste_kg = sum([cat_counts[k] * cat_weights[k] for k in cat_counts])
+    total_value_rp = total_waste_kg * value_per_kg
+    
+    total_value_str = f"Rp {total_value_rp:,.0f}".replace(',', '.')
+    if total_value_rp >= 1000000:
+        total_value_str = f"Rp {total_value_rp/1000000:.2f} jt".replace('.', ',')
+        
+    most_wasted = max(cat_counts, key=cat_counts.get) if total_items > 0 else "-"
+    most_wasted_pct = (cat_counts[most_wasted] / total_items * 100) if total_items > 0 else 0
+    
+    categories = []
+    for cat_name, count in cat_counts.items():
+        sisa_kg = count * cat_weights.get(cat_name, 0.05)
+        pct = (count / total_items * 100) if total_items > 0 else 0
+        
+        status = 'Normal'
+        if pct > tol_kritis: status = 'Kritis'
+        elif pct > tol_normal: status = 'Perhatian'
+        
+        categories.append({
+            'name': cat_name,
+            'sisa_kg': sisa_kg,
+            'persen': pct,
+            'status': status
+        })
+        
+    # Calculate 7-day trend
+    trend_labels = []
+    trend_data = []
+    today = datetime.now().date()
+    
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        trend_labels.append(d.strftime('%a %d/%m').replace('Mon', 'Sen').replace('Tue', 'Sel').replace('Wed', 'Rab').replace('Thu', 'Kam').replace('Fri', 'Jum').replace('Sat', 'Sab').replace('Sun', 'Min'))
+        
+        day_items = 0
+        day_scans = 0
+        for s in all_scans:
+            if s.timestamp and isinstance(s.timestamp, datetime) and s.timestamp.date() == d:
+                day_scans += 1
+                items = json.loads(s.items_json) if s.items_json else []
+                for it in items:
+                    day_items += it.get('jumlah', 0)
+        
+        pct = (day_items / (day_scans * 5) * 100) if day_scans > 0 else 0
+        trend_data.append(round(pct))
+
+    return {
+        'total_value': total_value_str,
+        'value_change': 'Real Data',
+        'total_waste': f"{total_waste_kg:.1f} kg".replace('.', ','),
+        'waste_change': 'Real Data',
+        'most_wasted': most_wasted,
+        'most_wasted_desc': f"Sisa rata-rata {most_wasted_pct:.1f}%".replace('.', ','),
+        'total_scanned': str(total_scanned),
+        'scanned_desc': 'Sinkron mobile',
+        'categories': categories,
+        'recent_scans': recent_scans,
+        'chart_labels': trend_labels,
+        'chart_data': trend_data
+    }
+
+
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if 'admin_logged_in' in session:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if db:
+            docs = db.collection('admins').where('username', '==', username).where('password', '==', password).limit(1).stream()
+            admin = None
+            for doc in docs:
+                admin = doc.to_dict()
+                break
+                
+            if admin:
+                session['admin_logged_in'] = True
+                session['admin_username'] = username
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Username atau password salah', 'error')
+        else:
+            flash('Database tidak terhubung', 'error')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    data = calculate_dashboard_stats()
     return render_template('dashboard.html', data=data)
 
 @app.route('/formulir')
+@login_required
 def formulir():
-    return render_template('formulir.html')
+    formulir_data = []
+    if db:
+        # For simplicity in this dashboard, get recent menus
+        menus = []
+        docs = db.collection('menu_harian').order_by('tanggal', direction=firestore.Query.DESCENDING).limit(30).stream()
+        for doc in docs:
+            menus.append(MenuHarian.from_dict(doc.to_dict(), doc_id=doc.id))
+            
+        all_scans = []
+        scan_docs = db.collection('scan_log').stream()
+        for sdoc in scan_docs:
+            all_scans.append(ScanLog.from_dict(sdoc.to_dict(), sdoc.id))
+            
+        for menu in menus:
+            # Brt Masak
+            karbo_ms = menu.karbo_gr or 0
+            proth_ms = menu.proth_gr or 0
+            protn_ms = menu.protn_gr or 0
+            sayur_ms = menu.sayur_gr or 0
+            
+            porsi = menu.total_porsi or 0
+            
+            # Brt Total (kg)
+            karbo_tot = (karbo_ms * porsi) / 1000
+            proth_tot = (proth_ms * porsi) / 1000
+            protn_tot = (protn_ms * porsi) / 1000
+            sayur_tot = (sayur_ms * porsi) / 1000
+            
+            # Count waste from scans on that date
+            menu_date = menu.tanggal
+            karbo_waste = 0
+            proth_waste = 0
+            protn_waste = 0
+            sayur_waste = 0
+            
+            if menu_date:
+                for scan in all_scans:
+                    scan_date = scan.timestamp.strftime('%Y-%m-%d') if hasattr(scan.timestamp, 'strftime') else (scan.timestamp.split('T')[0] if isinstance(scan.timestamp, str) else None)
+                    # if date matches (or simple string match)
+                    if scan_date == menu_date or scan_date == str(menu_date):
+                        items = json.loads(scan.items_json) if scan.items_json else []
+                        for item in items:
+                            cat = item.get('kategori', '')
+                            qty = item.get('jumlah', 0)
+                            if cat == 'Karbohidrat': karbo_waste += qty
+                            elif cat == 'Protein Hewani': proth_waste += qty
+                            elif cat == 'Protein Nabati': protn_waste += qty
+                            elif cat == 'Sayur': sayur_waste += qty
+            
+            weight_per_item = 0.05 # 50g per item
+            karbo_sisa = karbo_waste * weight_per_item
+            proth_sisa = proth_waste * weight_per_item
+            protn_sisa = protn_waste * weight_per_item
+            sayur_sisa = sayur_waste * weight_per_item
+            
+            formulir_data.append({
+                'tanggal_fmt': menu_date,
+                'nama_menu': menu.nama_menu,
+                'sasaran': menu.sasaran,
+                'porsi': porsi,
+                
+                'karbo_ms': karbo_ms, 'karbo_tot': karbo_tot, 'karbo_sisa': karbo_sisa,
+                'karbo_pct': (karbo_sisa / karbo_tot * 100) if karbo_tot > 0 else 0,
+                
+                'proth_ms': proth_ms, 'proth_tot': proth_tot, 'proth_sisa': proth_sisa,
+                'proth_pct': (proth_sisa / proth_tot * 100) if proth_tot > 0 else 0,
+                
+                'protn_ms': protn_ms, 'protn_tot': protn_tot, 'protn_sisa': protn_sisa,
+                'protn_pct': (protn_sisa / protn_tot * 100) if protn_tot > 0 else 0,
+                
+                'sayur_ms': sayur_ms, 'sayur_tot': sayur_tot, 'sayur_sisa': sayur_sisa,
+                'sayur_pct': (sayur_sisa / sayur_tot * 100) if sayur_tot > 0 else 0,
+            })
+            
+    return render_template('formulir.html', data=formulir_data)
 
 @app.route('/log-sinkronisasi')
+@login_required
 def log_sinkronisasi():
-    db_scans = ScanLog.query.order_by(ScanLog.timestamp.desc()).all()
+    db_scans = []
+    if db:
+        docs = db.collection('scan_log').order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+        for doc in docs:
+            db_scans.append(ScanLog.from_dict(doc.to_dict(), doc_id=doc.id))
+            
+    cat_totals = {'Karbohidrat': 0, 'Protein Hewani': 0, 'Protein Nabati': 0, 'Sayur': 0, 'Buah': 0}
+            
     scans = []
     for s in db_scans:
         items = json.loads(s.items_json) if s.items_json else []
         formatted_items = []
+        scan_total = 0
         for i in items:
             name = i.get('kategori', '')
+            qty = i.get('jumlah', 0)
+            scan_total += qty
+            if name in cat_totals:
+                cat_totals[name] += qty
+                
             short_name = name
             c = 'karbo'
             if name == 'Karbohidrat': short_name = 'Karbo'; c = 'karbo'
@@ -93,40 +320,114 @@ def log_sinkronisasi():
             elif name == 'Protein Nabati': short_name = 'Prot.N'; c = 'protn'
             elif name == 'Sayur': short_name = 'Sayur'; c = 'sayur'
             elif name == 'Buah': short_name = 'Buah'; c = 'buah'
-            formatted_items.append({'n': short_name, 'q': i.get('jumlah', 0), 'c': c})
+            formatted_items.append({'n': short_name, 'q': qty, 'c': c})
+            
+        time_str = ''
+        if s.timestamp:
+            if isinstance(s.timestamp, datetime):
+                time_str = s.timestamp.strftime('%H:%M')
+            elif isinstance(s.timestamp, str) and 'T' in s.timestamp:
+                time_str = s.timestamp.split('T')[1][:5]
+                
+        score = 100 - (scan_total * 5)
+        if score < 0: score = 0
             
         scans.append({
             'id': s.nampan_id,
-            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
+            'time': time_str,
             'items': formatted_items,
-            'pct': '95%'
+            'pct': f'{score}%'
         })
-    return render_template('log.html', scans=scans)
-
-@app.route('/pengaturan')
-def pengaturan():
-    return render_template('settings.html')
+        
+    total_all = sum(cat_totals.values())
+    
+    stats = {
+        'karbo': {'val': cat_totals['Karbohidrat'], 'pct': (cat_totals['Karbohidrat'] / total_all * 100) if total_all > 0 else 0},
+        'proth': {'val': cat_totals['Protein Hewani'], 'pct': (cat_totals['Protein Hewani'] / total_all * 100) if total_all > 0 else 0},
+        'protn': {'val': cat_totals['Protein Nabati'], 'pct': (cat_totals['Protein Nabati'] / total_all * 100) if total_all > 0 else 0},
+        'sayur': {'val': cat_totals['Sayur'], 'pct': (cat_totals['Sayur'] / total_all * 100) if total_all > 0 else 0},
+        'buah': {'val': cat_totals['Buah'], 'pct': (cat_totals['Buah'] / total_all * 100) if total_all > 0 else 0},
+    }
+        
+    return render_template('log.html', scans=scans, stats=stats)
 
 @app.route('/master-menu')
+@login_required
 def master_menu():
-    menus = MenuHarian.query.order_by(MenuHarian.tanggal.desc()).all()
+    menus = []
+    if db:
+        docs = db.collection('menu_harian').order_by('tanggal', direction=firestore.Query.DESCENDING).stream()
+        for doc in docs:
+            menus.append(MenuHarian.from_dict(doc.to_dict(), doc_id=doc.id))
     return render_template('master_menu.html', menus=menus)
 
 @app.route('/karyawan')
+@login_required
 def karyawan():
-    karyawans = Karyawan.query.all()
-    return render_template('karyawan.html', karyawans=karyawans)
+    karyawans = []
+    if db:
+        docs = db.collection('karyawan').stream()
+        for doc in docs:
+            karyawans.append(Karyawan.from_dict(doc.to_dict(), doc_id=doc.id))
+            
+    aktif = sum(1 for k in karyawans if k.is_active)
+    nonaktif = sum(1 for k in karyawans if not k.is_active)
+    total = len(karyawans)
+            
+    return render_template('karyawan.html', karyawans=karyawans, stats={'aktif': aktif, 'nonaktif': nonaktif, 'total': total})
+
+@app.route('/pengaturan')
+@login_required
+def pengaturan():
+    settings = {}
+    if db:
+        docs = db.collection('pengaturan').limit(1).stream()
+        for doc in docs:
+            settings = doc.to_dict()
+            settings['id'] = doc.id
+            break
+            
+    if not settings:
+        settings = {
+            'berat_karbo': 250,
+            'berat_proth': 120,
+            'berat_protn': 80,
+            'berat_sayur': 80,
+            'berat_buah': 100,
+            'tol_normal': 10,
+            'tol_kritis': 15,
+            'notif_sisa': True,
+            'notif_laporan': False
+        }
+    return render_template('settings.html', settings=settings)
+
+@app.route('/api/settings/update', methods=['POST'])
+@login_required
+def update_settings():
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        data = request.get_json()
+        doc_id = data.pop('id', 'main_config')
+        db.collection('pengaturan').document(doc_id).set(data, merge=True)
+        return jsonify({'status': 'success', 'message': 'Pengaturan berhasil disimpan'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 
 @app.route('/api/karyawan/add', methods=['POST'])
 def add_karyawan():
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
     try:
         data = request.get_json()
         if not data or not data.get('nik') or not data.get('nama'):
             return jsonify({'status': 'error', 'message': 'NIK dan Nama wajib diisi'}), 400
         
-        # Cek apakah NIK sudah ada
-        existing = Karyawan.query.filter_by(nik=data['nik']).first()
-        if existing:
+        doc_ref = db.collection('karyawan').document(data['nik'])
+        if doc_ref.get().exists:
             return jsonify({'status': 'error', 'message': 'NIK sudah terdaftar'}), 400
             
         new_karyawan = Karyawan(
@@ -139,28 +440,59 @@ def add_karyawan():
             last_login=None
         )
         
-        db.session.add(new_karyawan)
-        db.session.commit()
+        doc_ref.set(new_karyawan.to_dict())
         return jsonify({'status': 'success', 'message': 'Karyawan berhasil ditambahkan'}), 201
     except Exception as e:
-        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/menu/add', methods=['POST'])
+@login_required
+def add_menu():
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        data = request.get_json()
+        if not data or not data.get('nama_menu') or not data.get('tanggal'):
+            return jsonify({'status': 'error', 'message': 'Nama menu dan tanggal wajib diisi'}), 400
+            
+        new_menu = MenuHarian(
+            nama_menu=data.get('nama_menu'),
+            tanggal=data.get('tanggal'),
+            shift=data.get('shift', 'Pagi'),
+            sasaran=data.get('sasaran'),
+            total_porsi=int(data.get('total_porsi', 0)) if data.get('total_porsi') else None,
+            karbo_gr=int(data.get('karbo_gr')) if data.get('karbo_gr') else None,
+            proth_gr=int(data.get('proth_gr')) if data.get('proth_gr') else None,
+            protn_gr=int(data.get('protn_gr')) if data.get('protn_gr') else None,
+            sayur_gr=int(data.get('sayur_gr')) if data.get('sayur_gr') else None,
+            buah_gr=int(data.get('buah_gr')) if data.get('buah_gr') else None
+        )
+        
+        db.collection('menu_harian').add(new_menu.to_dict())
+        return jsonify({'status': 'success', 'message': 'Menu berhasil ditambahkan'}), 201
+    except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # --- API ENDPOINTS UNTUK APLIKASI MOBILE (SIGIZA) ---
 
 @app.route('/api/login', methods=['POST'])
 def api_login():
-    """Endpoint untuk login petugas dari aplikasi mobile menggunakan NIK dan PIN"""
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
     data = request.get_json()
     if not data or 'nik' not in data or 'pin' not in data:
         return jsonify({'status': 'error', 'message': 'NIK dan PIN wajib diisi'}), 400
     
-    petugas = Karyawan.query.filter_by(nik=data['nik'], pin=data['pin'], is_active=True).first()
+    docs = db.collection('karyawan').where('nik', '==', data['nik']).where('pin', '==', data['pin']).where('is_active', '==', True).limit(1).stream()
+    petugas = None
+    for doc in docs:
+        petugas = Karyawan.from_dict(doc.to_dict(), doc_id=doc.id)
+        break
     
     if petugas:
-        petugas.last_login = datetime.now()
-        db.session.commit()
-        
+        db.collection('karyawan').document(petugas.nik).update({'last_login': datetime.now()})
         return jsonify({
             'status': 'success', 
             'message': 'Login berhasil',
@@ -168,6 +500,7 @@ def api_login():
                 'nik': petugas.nik,
                 'nama': petugas.nama,
                 'posisi': petugas.posisi,
+                'shift_dominan': petugas.shift_dominan,
                 'token': 'dummy_jwt_token_12345'
             }
         }), 200
@@ -176,16 +509,19 @@ def api_login():
 
 @app.route('/api/menu', methods=['GET'])
 def api_menu():
-    """Endpoint untuk mengambil daftar menu harian dari server ke mobile"""
-    today = datetime.now().date()
-    menus = MenuHarian.query.filter_by(tanggal=today).all()
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    today_str = datetime.now().date().isoformat()
+    docs = db.collection('menu_harian').where('tanggal', '==', today_str).stream()
     
     menu_data = []
-    for m in menus:
+    for d in docs:
+        m = MenuHarian.from_dict(d.to_dict(), doc_id=d.id)
         menu_data.append({
             'id': m.id,
             'nama_menu': m.nama_menu,
-            'tanggal': m.tanggal.strftime('%Y-%m-%d'),
+            'tanggal': m.tanggal,
             'shift': m.shift,
             'komposisi_standar': {
                 'karbohidrat': m.karbo_gr or 0,
@@ -203,7 +539,9 @@ def api_menu():
 
 @app.route('/api/scan', methods=['POST'])
 def api_scan():
-    """Endpoint untuk menerima data mentah object counting dari aplikasi mobile"""
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
     data = request.get_json()
     if not data or 'nampan_id' not in data or 'items' not in data:
         return jsonify({'status': 'error', 'message': 'Format data tidak valid'}), 400
@@ -220,14 +558,12 @@ def api_scan():
         nampan_id=data['nampan_id'],
         timestamp=scan_time,
         petugas_nik=petugas_nik,
-        items_json=json.dumps(data['items'])
+        items=data['items']
     )
     
-    db.session.add(new_scan)
     try:
-        db.session.commit()
+        db.collection('scan_log').add(new_scan.to_dict())
     except Exception as e:
-        db.session.rollback()
         return jsonify({'status': 'error', 'message': f'Gagal menyimpan data: {str(e)}'}), 500
         
     return jsonify({
@@ -238,71 +574,15 @@ def api_scan():
 
 @app.route('/api/dashboard', methods=['GET'])
 def api_dashboard():
-    """Endpoint untuk mengambil data dashboard untuk mobile app, bisa difilter berdasarkan petugas"""
     nik = request.args.get('nik')
-    
-    # Base query for recent scans
-    query = ScanLog.query.order_by(ScanLog.timestamp.desc())
-    if nik:
-        query = query.filter_by(petugas_nik=nik)
-        
-    db_scans = query.limit(5).all()
-    
-    recent_scans = []
-    for s in db_scans:
-        items = json.loads(s.items_json) if s.items_json else []
-        formatted_items = []
-        for i in items:
-            name = i.get('kategori', '')
-            short_name = name
-            color = 'blue'
-            if name == 'Karbohidrat': short_name = 'Karbo'; color = 'blue'
-            elif name == 'Protein Hewani': short_name = 'Prot.H'; color = 'red'
-            elif name == 'Protein Nabati': short_name = 'Prot.N'; color = 'purple'
-            elif name == 'Sayur': short_name = 'Sayur'; color = 'green'
-            elif name == 'Buah': short_name = 'Buah'; color = 'yellow'
-            
-            formatted_items.append({'name': short_name, 'qty': i.get('jumlah', 0), 'color': color})
-            
-        recent_scans.append({
-            'id': s.nampan_id,
-            'time': s.timestamp.strftime('%H:%M') if s.timestamp else '',
-            'items': formatted_items,
-            'score': '95%' # Dummy score
-        })
-
-    # Get total scanned count
-    total_query = ScanLog.query
-    if nik:
-        total_query = total_query.filter_by(petugas_nik=nik)
-    total_scanned = total_query.count()
-
-    # Using dummy data for other statistics to match the web dashboard
-    data = {
-        'total_value': 'Rp 1,24 jt',
-        'value_change': '+ 14% vs kemarin',
-        'total_waste': '54,7 kg',
-        'waste_change': '+ 7,3 kg',
-        'most_wasted': 'Protein Hewani',
-        'most_wasted_desc': 'Sisa rata-rata 17%',
-        'total_scanned': str(total_scanned),
-        'scanned_desc': 'Sinkron mobile',
-        'categories': [
-            {'name': 'Karbohidrat', 'sisa_kg': 12.4, 'persen': 7.1, 'status': 'Normal', 'color': 'blue'},
-            {'name': 'Protein Hewani', 'sisa_kg': 18.6, 'persen': 17.0, 'status': 'Kritis', 'color': 'red'},
-            {'name': 'Protein Nabati', 'sisa_kg': 9.3, 'persen': 12.4, 'status': 'Perhatian', 'color': 'purple'},
-            {'name': 'Sayur', 'sisa_kg': 11.0, 'persen': 11.8, 'status': 'Perhatian', 'color': 'green'},
-            {'name': 'Buah', 'sisa_kg': 3.4, 'persen': 8.3, 'status': 'Normal', 'color': 'yellow'}
-        ],
-        'recent_scans': recent_scans
-    }
+    data = calculate_dashboard_stats(nik)
+    if not data:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
     
     return jsonify({
         'status': 'success',
         'data': data
     }), 200
-
-# --- END OF API ENDPOINTS ---
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

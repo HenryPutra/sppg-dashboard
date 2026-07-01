@@ -91,7 +91,7 @@
             <tbody>
                 {% for menu in menus %}
                 <tr>
-                    <td>{{ menu.tanggal.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ menu.tanggal[8:10] }}/{{ menu.tanggal[5:7] }}/{{ menu.tanggal[0:4] }}</td>
                     <td><span class="shift-badge shift-{{ menu.shift.lower() }}">{{ menu.shift }}</span></td>
                     <td style="font-weight: 500;">{{ menu.nama_menu }}</td>
                     <td>{{ menu.sasaran }}</td>
@@ -127,20 +127,20 @@
         
         <div class="form-group-modal">
             <label>Nama menu</label>
-            <input type="text" class="form-control-modal" placeholder="cth: Nasi Goreng Spesial">
+            <input type="text" id="inputMenuNama" class="form-control-modal" placeholder="cth: Nasi Goreng Spesial">
         </div>
         
         <div class="grid-2-form">
             <div class="form-group-modal">
                 <label>Tanggal</label>
-                <input type="date" class="form-control-modal" value="2026-06-10">
+                <input type="date" id="inputMenuTanggal" class="form-control-modal" value="{{ now.strftime('%Y-%m-%d') if now else '2026-06-10' }}">
             </div>
             <div class="form-group-modal">
                 <label>Shift</label>
-                <select class="form-control-modal">
-                    <option>Pagi</option>
-                    <option>Siang</option>
-                    <option>Sore</option>
+                <select id="inputMenuShift" class="form-control-modal">
+                    <option value="Pagi">Pagi</option>
+                    <option value="Siang">Siang</option>
+                    <option value="Sore">Sore</option>
                 </select>
             </div>
         </div>
@@ -148,11 +148,11 @@
         <div class="grid-2-form">
             <div class="form-group-modal">
                 <label>Sasaran penerima</label>
-                <input type="text" class="form-control-modal" placeholder="cth: Siswa SD N 1 Debong">
+                <input type="text" id="inputMenuSasaran" class="form-control-modal" placeholder="cth: Siswa SD N 1 Debong">
             </div>
             <div class="form-group-modal">
                 <label>Total porsi</label>
-                <input type="number" class="form-control-modal" placeholder="820">
+                <input type="number" id="inputMenuPorsi" class="form-control-modal" placeholder="820">
             </div>
         </div>
         
@@ -162,35 +162,88 @@
             <div class="grid-2-form">
                 <div class="form-group-modal">
                     <label><span class="cat-pill karbo" style="padding: 2px 8px; font-size: 10px;">Karbohidrat</span></label>
-                    <input type="number" class="form-control-modal" placeholder="250">
+                    <input type="number" id="inputMenuKarbo" class="form-control-modal" placeholder="250">
                 </div>
                 <div class="form-group-modal">
                     <label><span class="cat-pill proth" style="padding: 2px 8px; font-size: 10px;">Prot. Hewani</span></label>
-                    <input type="number" class="form-control-modal" placeholder="120">
+                    <input type="number" id="inputMenuProth" class="form-control-modal" placeholder="120">
                 </div>
             </div>
             <div class="grid-2-form">
                 <div class="form-group-modal">
                     <label><span class="cat-pill protn" style="padding: 2px 8px; font-size: 10px;">Prot. Nabati</span></label>
-                    <input type="number" class="form-control-modal" placeholder="—">
+                    <input type="number" id="inputMenuProtn" class="form-control-modal" placeholder="—">
                 </div>
                 <div class="form-group-modal">
                     <label><span class="cat-pill sayur" style="padding: 2px 8px; font-size: 10px;">Sayur</span></label>
-                    <input type="number" class="form-control-modal" placeholder="80">
+                    <input type="number" id="inputMenuSayur" class="form-control-modal" placeholder="80">
                 </div>
             </div>
             <div class="grid-2-form">
                 <div class="form-group-modal">
                     <label><span class="cat-pill buah" style="padding: 2px 8px; font-size: 10px;">Buah</span></label>
-                    <input type="number" class="form-control-modal" placeholder="—">
+                    <input type="number" id="inputMenuBuah" class="form-control-modal" placeholder="—">
                 </div>
             </div>
         </div>
         
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
             <button class="btn btn-outline" onclick="document.getElementById('modalMenu').classList.remove('active')">Batal</button>
-            <button class="btn btn-primary"><i class="fa-solid fa-check"></i> Simpan Menu</button>
+            <button class="btn btn-primary" id="btnSimpanMenu" onclick="simpanMenu()"><i class="fa-solid fa-check"></i> Simpan Menu</button>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function simpanMenu() {
+    const data = {
+        nama_menu: document.getElementById('inputMenuNama').value,
+        tanggal: document.getElementById('inputMenuTanggal').value,
+        shift: document.getElementById('inputMenuShift').value,
+        sasaran: document.getElementById('inputMenuSasaran').value,
+        total_porsi: document.getElementById('inputMenuPorsi').value,
+        karbo_gr: document.getElementById('inputMenuKarbo').value,
+        proth_gr: document.getElementById('inputMenuProth').value,
+        protn_gr: document.getElementById('inputMenuProtn').value,
+        sayur_gr: document.getElementById('inputMenuSayur').value,
+        buah_gr: document.getElementById('inputMenuBuah').value
+    };
+    
+    if (!data.nama_menu || !data.tanggal) {
+        alert('Nama menu dan tanggal wajib diisi');
+        return;
+    }
+    
+    const btn = document.getElementById('btnSimpanMenu');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
+    btn.disabled = true;
+    
+    fetch('/api/menu/add', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.status === 'success') {
+            alert(result.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + result.message);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    })
+    .catch(error => {
+        alert('Terjadi kesalahan: ' + error);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+</script>
 {% endblock %}

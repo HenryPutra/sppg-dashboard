@@ -114,40 +114,59 @@
             <tr>
                 <td>10/6</td>
                 <td style="text-align: left;">Nasi Ayam Bakar</td>
-                <td>820</td>
-                <!-- Karbo -->
-                <td>250</td><td>205,0</td><td>16,4</td><td>8,0%</td>
-                <!-- Prot H -->
-                <td>150</td><td>123,0</td><td>22,1</td><td>18,0%</td>
-                <!-- Prot N -->
-                <td>-</td><td>-</td><td>-</td><td>-</td>
-                <!-- Sayur -->
-                <td>100</td><td>82,0</td><td>10,7</td><td>13,0%</td>
-            </tr>
+            {% set total = namespace(
+                karbo_tot=0, karbo_sisa=0,
+                proth_tot=0, proth_sisa=0,
+                protn_tot=0, protn_sisa=0,
+                sayur_tot=0, sayur_sisa=0,
+                karbo_ms=0, proth_ms=0, protn_ms=0, sayur_ms=0
+            ) %}
+            
+            {% for item in data %}
+            {% set total.karbo_tot = total.karbo_tot + item.karbo_tot %}
+            {% set total.karbo_sisa = total.karbo_sisa + item.karbo_sisa %}
+            {% set total.proth_tot = total.proth_tot + item.proth_tot %}
+            {% set total.proth_sisa = total.proth_sisa + item.proth_sisa %}
+            {% set total.protn_tot = total.protn_tot + item.protn_tot %}
+            {% set total.protn_sisa = total.protn_sisa + item.protn_sisa %}
+            {% set total.sayur_tot = total.sayur_tot + item.sayur_tot %}
+            {% set total.sayur_sisa = total.sayur_sisa + item.sayur_sisa %}
+            
+            {% set total.karbo_ms = total.karbo_ms + item.karbo_ms %}
+            {% set total.proth_ms = total.proth_ms + item.proth_ms %}
+            {% set total.protn_ms = total.protn_ms + item.protn_ms %}
+            {% set total.sayur_ms = total.sayur_ms + item.sayur_ms %}
+            
             <tr>
-                <td>09/6</td>
-                <td style="text-align: left;">Nasi Ikan + Tempe</td>
-                <td>820</td>
+                <td>{{ item.tanggal_fmt }}</td>
+                <td style="text-align: left;">{{ item.nama_menu }}</td>
+                <td>{{ item.porsi }}</td>
                 <!-- Karbo -->
-                <td>250</td><td>205,0</td><td>12,3</td><td>6,0%</td>
+                <td>{{ item.karbo_ms }}</td><td>{{ "%.1f"|format(item.karbo_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.karbo_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.karbo_pct)|replace('.', ',') }}%</td>
                 <!-- Prot H -->
-                <td>100</td><td>82,0</td><td>6,6</td><td>8,0%</td>
+                <td>{{ item.proth_ms }}</td><td>{{ "%.1f"|format(item.proth_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.proth_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.proth_pct)|replace('.', ',') }}%</td>
                 <!-- Prot N -->
-                <td>80</td><td>65,6</td><td>7,2</td><td>11,0%</td>
+                <td>{{ item.protn_ms }}</td><td>{{ "%.1f"|format(item.protn_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.protn_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.protn_pct)|replace('.', ',') }}%</td>
                 <!-- Sayur -->
-                <td>80</td><td>65,6</td><td>5,9</td><td>9,0%</td>
+                <td>{{ item.sayur_ms }}</td><td>{{ "%.1f"|format(item.sayur_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.sayur_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.sayur_pct)|replace('.', ',') }}%</td>
             </tr>
+            {% else %}
+            <tr><td colspan="19" style="padding: 32px; color: var(--text-muted);">Belum ada data menu harian untuk bulan ini.</td></tr>
+            {% endfor %}
+            
+            {% if data %}
             <tr class="row-total">
                 <td colspan="3">TOTAL</td>
                 <!-- Karbo -->
-                <td>750</td><td>615,0</td><td>43,1</td><td>7,0%</td>
+                <td>{{ total.karbo_ms }}</td><td>{{ "%.1f"|format(total.karbo_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.karbo_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.karbo_sisa / total.karbo_tot * 100 if total.karbo_tot > 0 else 0)|replace('.', ',') }}%</td>
                 <!-- Prot H -->
-                <td>370</td><td>303,4</td><td>45,4</td><td>14,9%</td>
+                <td>{{ total.proth_ms }}</td><td>{{ "%.1f"|format(total.proth_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.proth_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.proth_sisa / total.proth_tot * 100 if total.proth_tot > 0 else 0)|replace('.', ',') }}%</td>
                 <!-- Prot N -->
-                <td>160</td><td>131,2</td><td>15,7</td><td>11,9%</td>
+                <td>{{ total.protn_ms }}</td><td>{{ "%.1f"|format(total.protn_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.protn_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.protn_sisa / total.protn_tot * 100 if total.protn_tot > 0 else 0)|replace('.', ',') }}%</td>
                 <!-- Sayur -->
-                <td>260</td><td>213,2</td><td>24,4</td><td>11,4%</td>
+                <td>{{ total.sayur_ms }}</td><td>{{ "%.1f"|format(total.sayur_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.sayur_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.sayur_sisa / total.sayur_tot * 100 if total.sayur_tot > 0 else 0)|replace('.', ',') }}%</td>
             </tr>
+            {% endif %}
         </tbody>
     </table>
     

@@ -1,0 +1,30 @@
+{
+  "functions": [
+    {
+      "source": ".",
+      "codebase": "default",
+      "ignore": [
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "__pycache__",
+        "venv",
+        ".env"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "static",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "sppg_backend"
+      }
+    ]
+  }
+}

@@ -44,6 +44,9 @@
                     <li class="{% if request.path == '/karyawan' %}active{% endif %}">
                         <a href="/karyawan"><i class="fa-solid fa-users"></i> <span>Karyawan & Petugas</span></a>
                     </li>
+                    <li>
+                        <a href="#" style="color: #fca5a5;" onclick="event.preventDefault(); document.getElementById('logoutModal').style.display='flex';"><i class="fa-solid fa-arrow-right-from-bracket"></i> <span>Logout</span></a>
+                    </li>
                 </ul>
             </div>
             
@@ -130,6 +133,21 @@
         });
     </script>
     
+    <!-- Logout Modal -->
+    <div id="logoutModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 16px auto;">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1f2937;">Konfirmasi Logout</h3>
+            <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 14px;">Apakah Anda yakin ingin keluar dari aplikasi?</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="document.getElementById('logoutModal').style.display='none';" style="padding: 10px 16px; border-radius: 8px; border: 1px solid #d1d5db; background: white; color: #374151; font-weight: 500; cursor: pointer; flex: 1;">Tidak</button>
+                <a href="/logout" style="padding: 10px 16px; border-radius: 8px; border: none; background: #ef4444; color: white; font-weight: 500; cursor: pointer; text-decoration: none; flex: 1; display: inline-block;">Iya, Logout</a>
+            </div>
+        </div>
+    </div>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

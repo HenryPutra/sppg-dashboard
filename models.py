@@ -1,57 +1,126 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
 
-db = SQLAlchemy()
+class Karyawan:
+    def __init__(self, nik=None, nama=None, posisi=None, shift_dominan=None, pin=None, is_active=True, last_login=None, **kwargs):
+        self.nik = nik
+        self.nama = nama
+        self.posisi = posisi
+        self.shift_dominan = shift_dominan
+        self.pin = pin
+        self.is_active = is_active
+        self.last_login = last_login
+        
+    def to_dict(self):
+        return {
+            'nik': self.nik,
+            'nama': self.nama,
+            'posisi': self.posisi,
+            'shift_dominan': self.shift_dominan,
+            'pin': self.pin,
+            'is_active': self.is_active,
+            'last_login': self.last_login
+        }
+        
+    @staticmethod
+    def from_dict(data, doc_id=None):
+        if not data: return None
+        return Karyawan(
+            nik=doc_id or data.get('nik'),
+            nama=data.get('nama'),
+            posisi=data.get('posisi'),
+            shift_dominan=data.get('shift_dominan'),
+            pin=data.get('pin'),
+            is_active=data.get('is_active', True),
+            last_login=data.get('last_login')
+        )
 
-class Karyawan(db.Model):
-    __tablename__ = 'karyawan'
-    nik = db.Column(db.String(20), primary_key=True)
-    nama = db.Column(db.String(100), nullable=False)
-    posisi = db.Column(db.String(50))
-    shift_dominan = db.Column(db.String(20))
-    pin = db.Column(db.String(6))
-    is_active = db.Column(db.Boolean, default=True)
-    last_login = db.Column(db.DateTime, nullable=True)
+class MenuHarian:
+    def __init__(self, id=None, nama_menu=None, tanggal=None, shift=None, sasaran=None, total_porsi=None, karbo_gr=None, proth_gr=None, protn_gr=None, sayur_gr=None, buah_gr=None, **kwargs):
+        self.id = id
+        self.nama_menu = nama_menu
+        self.tanggal = tanggal
+        self.shift = shift
+        self.sasaran = sasaran
+        self.total_porsi = total_porsi
+        self.karbo_gr = karbo_gr
+        self.proth_gr = proth_gr
+        self.protn_gr = protn_gr
+        self.sayur_gr = sayur_gr
+        self.buah_gr = buah_gr
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def to_dict(self):
+        return {
+            'nama_menu': self.nama_menu,
+            'tanggal': self.tanggal.isoformat() if hasattr(self.tanggal, 'isoformat') else self.tanggal,
+            'shift': self.shift,
+            'sasaran': self.sasaran,
+            'total_porsi': self.total_porsi,
+            'karbo_gr': self.karbo_gr,
+            'proth_gr': self.proth_gr,
+            'protn_gr': self.protn_gr,
+            'sayur_gr': self.sayur_gr,
+            'buah_gr': self.buah_gr
+        }
 
-class MenuHarian(db.Model):
-    __tablename__ = 'menu_harian'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nama_menu = db.Column(db.String(150), nullable=False)
-    tanggal = db.Column(db.Date, nullable=False)
-    shift = db.Column(db.String(20), nullable=False)
-    sasaran = db.Column(db.String(100))
-    total_porsi = db.Column(db.Integer)
-    karbo_gr = db.Column(db.Integer)
-    proth_gr = db.Column(db.Integer)
-    protn_gr = db.Column(db.Integer)
-    sayur_gr = db.Column(db.Integer)
-    buah_gr = db.Column(db.Integer)
+    @staticmethod
+    def from_dict(data, doc_id=None):
+        if not data: return None
+        
+        # parse datetime if needed, or leave as string
+        tanggal_str = data.get('tanggal')
+        
+        return MenuHarian(
+            id=doc_id,
+            nama_menu=data.get('nama_menu'),
+            tanggal=tanggal_str,
+            shift=data.get('shift'),
+            sasaran=data.get('sasaran'),
+            total_porsi=data.get('total_porsi'),
+            karbo_gr=data.get('karbo_gr'),
+            proth_gr=data.get('proth_gr'),
+            protn_gr=data.get('protn_gr'),
+            sayur_gr=data.get('sayur_gr'),
+            buah_gr=data.get('buah_gr')
+        )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+class ScanLog:
+    def __init__(self, id=None, nampan_id=None, timestamp=None, petugas_nik=None, items_json=None, items=None, **kwargs):
+        self.id = id
+        self.nampan_id = nampan_id
+        self.timestamp = timestamp or datetime.utcnow()
+        self.petugas_nik = petugas_nik
+        if items is not None:
+            self._items = items
+            self.items_json = json.dumps(items)
+        else:
+            self.items_json = items_json
+            self._items = json.loads(items_json) if items_json else []
 
-class ScanLog(db.Model):
-    __tablename__ = 'scan_log'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    nampan_id = db.Column(db.String(50), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    petugas_nik = db.Column(db.String(20), db.ForeignKey('karyawan.nik'))
-    items_json = db.Column(db.Text) # Storing JSON string for simplicity
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    
     @property
     def items(self):
-        if self.items_json:
-            return json.loads(self.items_json)
-        return []
+        return self._items
     
     @items.setter
     def items(self, value):
+        self._items = value
         self.items_json = json.dumps(value)
+
+    def to_dict(self):
+        return {
+            'nampan_id': self.nampan_id,
+            'timestamp': self.timestamp,
+            'petugas_nik': self.petugas_nik,
+            'items_json': self.items_json
+        }
+
+    @staticmethod
+    def from_dict(data, doc_id=None):
+        if not data: return None
+        return ScanLog(
+            id=doc_id,
+            nampan_id=data.get('nampan_id'),
+            timestamp=data.get('timestamp'),
+            petugas_nik=data.get('petugas_nik'),
+            items_json=data.get('items_json')
+        )

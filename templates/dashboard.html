@@ -157,27 +157,26 @@
 {% endblock %}
 
 {% block extra_js %}
+<script id="chart-data" type="application/json">
+    {{ data.chart_data | tojson }}
+</script>
+<script id="chart-labels" type="application/json">
+    {{ data.chart_labels | tojson }}
+</script>
 <script>
     const ctx = document.getElementById('trendChart').getContext('2d');
     
-    // Gradient for the bars (if needed, but design looks like flat colors)
+    const rawData = JSON.parse(document.getElementById('chart-data').textContent);
+    const dynamicColors = rawData.map(val => val > 15 ? '#fca5a5' : (val > 10 ? '#fde047' : '#93c5fd'));
     
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['Sel 4/6', 'Rab 5/6', 'Kam 6/6', 'Jum 7/6', 'Sab 8/6', 'Min 9/6', 'Sen 10/6'],
+            labels: JSON.parse(document.getElementById('chart-labels').textContent),
             datasets: [{
                 label: '% Sisa',
-                data: [14, 10, 8, 16, 20, 12, 9],
-                backgroundColor: [
-                    '#fde047', // Yellow (14% - Perhatian)
-                    '#93c5fd', // Blue
-                    '#93c5fd', // Blue
-                    '#fca5a5', // Red (16% - Kritis)
-                    '#fca5a5', // Red (20% - Kritis)
-                    '#fde047', // Yellow (12% - Perhatian)
-                    '#93c5fd'  // Blue
-                ],
+                data: rawData,
+                backgroundColor: dynamicColors,
                 borderRadius: 4,
                 barPercentage: 0.5
             }]

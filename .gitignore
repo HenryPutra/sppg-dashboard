@@ -29,6 +29,7 @@ ENV/
 *.db
 *.sqlite3
 sppg_local.db
+serviceAccountKey.json
 
 # Flask
 instance/

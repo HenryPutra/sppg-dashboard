@@ -44,15 +44,15 @@
 {% block content %}
 <div class="karyawan-stats">
     <div class="k-stat-card">
-        <div class="k-stat-num" style="color: var(--primary-blue);">12</div>
+        <div class="k-stat-num" style="color: var(--text-main);">{{ stats.total }}</div>
         <div class="k-stat-label">Total karyawan terdaftar</div>
     </div>
     <div class="k-stat-card">
-        <div class="k-stat-num" style="color: var(--color-sayur);">10</div>
+        <div class="k-stat-num" style="color: var(--color-sayur);">{{ stats.aktif }}</div>
         <div class="k-stat-label">Akun aktif hari ini</div>
     </div>
     <div class="k-stat-card">
-        <div class="k-stat-num" style="color: var(--color-proth);">2</div>
+        <div class="k-stat-num" style="color: var(--color-proth);">{{ stats.nonaktif }}</div>
         <div class="k-stat-label">Akun nonaktif / dibekukan</div>
     </div>
 </div>
@@ -61,7 +61,7 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
             <h2 class="card-title">Daftar karyawan</h2>
-            <p class="card-subtitle">12 terdaftar</p>
+            <p class="card-subtitle">{{ stats.total }} terdaftar</p>
         </div>
         <div class="filter-bar">
             <div class="search-input-wrapper">

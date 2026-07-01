@@ -74,7 +74,7 @@
             <div class="cat-pill-settings" style="background:var(--color-karbo-bg); color:var(--color-karbo);">Karbohidrat</div>
             <div class="conv-label">1 item =</div>
             <div class="input-group">
-                <input type="number" class="input-num" value="250">
+                <input type="number" class="input-num" id="berat_karbo" value="{{ settings.berat_karbo }}">
                 <span class="input-unit">gram</span>
             </div>
         </div>
@@ -83,7 +83,7 @@
             <div class="cat-pill-settings" style="background:var(--color-proth-bg); color:var(--color-proth);">Prot. Hewani</div>
             <div class="conv-label">1 item =</div>
             <div class="input-group">
-                <input type="number" class="input-num" value="120">
+                <input type="number" class="input-num" id="berat_proth" value="{{ settings.berat_proth }}">
                 <span class="input-unit">gram</span>
             </div>
         </div>
@@ -92,7 +92,7 @@
             <div class="cat-pill-settings" style="background:var(--color-protn-bg); color:var(--color-protn);">Prot. Nabati</div>
             <div class="conv-label">1 item =</div>
             <div class="input-group">
-                <input type="number" class="input-num" value="80">
+                <input type="number" class="input-num" id="berat_protn" value="{{ settings.berat_protn }}">
                 <span class="input-unit">gram</span>
             </div>
         </div>
@@ -101,7 +101,7 @@
             <div class="cat-pill-settings" style="background:var(--color-sayur-bg); color:var(--color-sayur);">Sayur</div>
             <div class="conv-label">1 item =</div>
             <div class="input-group">
-                <input type="number" class="input-num" value="80">
+                <input type="number" class="input-num" id="berat_sayur" value="{{ settings.berat_sayur }}">
                 <span class="input-unit">gram</span>
             </div>
         </div>
@@ -110,14 +110,13 @@
             <div class="cat-pill-settings" style="background:var(--color-buah-bg); color:#ca8a04;">Buah</div>
             <div class="conv-label">1 item =</div>
             <div class="input-group">
-                <input type="number" class="input-num" value="100">
+                <input type="number" class="input-num" id="berat_buah" value="{{ settings.berat_buah }}">
                 <span class="input-unit">gram</span>
             </div>
         </div>
         
         <div class="action-row">
-            <button class="btn btn-cancel">Batal</button>
-            <button class="btn btn-black"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+            <button class="btn btn-black" onclick="simpanPengaturan('berat')"><i class="fa-solid fa-floppy-disk"></i> Simpan Konversi</button>
         </div>
     </div>
     
@@ -133,21 +132,21 @@
         <div class="tolerance-card tol-normal">
             <div class="tol-title" style="color: #166534;">Normal (hijau)</div>
             <div class="tol-content">
-                Sisa di bawah <input type="number" class="tol-input" value="10"> %
+                Sisa di bawah <input type="number" class="tol-input" id="tol_normal" value="{{ settings.tol_normal }}"> %
             </div>
         </div>
         
         <div class="tolerance-card tol-warning">
             <div class="tol-title" style="color: #854d0e;">Perhatian (kuning)</div>
             <div class="tol-content">
-                Sisa antara 10% hingga <input type="number" class="tol-input" value="15"> %
+                Sisa antara <span id="lbl_tol_normal">{{ settings.tol_normal }}</span>% hingga <input type="number" class="tol-input" id="tol_kritis" value="{{ settings.tol_kritis }}"> %
             </div>
         </div>
         
         <div class="tolerance-card tol-critical">
             <div class="tol-title" style="color: #991b1b;">Kritis (merah)</div>
             <div class="tol-content">
-                Sisa di atas <b>15%</b> — wajib dilaporkan ke pengawas
+                Sisa di atas <b id="lbl_tol_kritis">{{ settings.tol_kritis }}%</b> — wajib dilaporkan ke pengawas
             </div>
         </div>
         
@@ -157,15 +156,55 @@
                 <div class="notif-desc">Alert saat kategori melebihi batas kritis</div>
             </div>
             <label class="toggle-switch">
-                <input type="checkbox" checked>
+                <input type="checkbox" id="notif_sisa" {% if settings.notif_sisa %}checked{% endif %}>
                 <span class="slider"></span>
             </label>
         </div>
         
         <div class="action-row">
-            <button class="btn btn-cancel">Batal</button>
-            <button class="btn btn-black"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+            <button class="btn btn-black" onclick="simpanPengaturan('toleransi')"><i class="fa-solid fa-floppy-disk"></i> Simpan Peringatan</button>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('tol_normal').addEventListener('input', function(e) {
+        document.getElementById('lbl_tol_normal').textContent = e.target.value;
+    });
+    document.getElementById('tol_kritis').addEventListener('input', function(e) {
+        document.getElementById('lbl_tol_kritis').textContent = e.target.value + '%';
+    });
+
+    function simpanPengaturan(tipe) {
+        let data = { id: '{{ settings.id|default("main_config") }}' };
+        
+        if (tipe === 'berat') {
+            data.berat_karbo = parseInt(document.getElementById('berat_karbo').value) || 250;
+            data.berat_proth = parseInt(document.getElementById('berat_proth').value) || 120;
+            data.berat_protn = parseInt(document.getElementById('berat_protn').value) || 80;
+            data.berat_sayur = parseInt(document.getElementById('berat_sayur').value) || 80;
+            data.berat_buah = parseInt(document.getElementById('berat_buah').value) || 100;
+        } else if (tipe === 'toleransi') {
+            data.tol_normal = parseInt(document.getElementById('tol_normal').value) || 10;
+            data.tol_kritis = parseInt(document.getElementById('tol_kritis').value) || 15;
+            data.notif_sisa = document.getElementById('notif_sisa').checked;
+        }
+        
+        fetch('/api/settings/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if(res.status === 'success') {
+                alert(res.message);
+            } else {
+                alert('Gagal: ' + res.message);
+            }
+        }).catch(e => alert('Error: ' + e));
+    }
+</script>
 {% endblock %}

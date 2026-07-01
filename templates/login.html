@@ -179,12 +179,22 @@
         <h1 class="login-title">SPPG Debong Kulon</h1>
         <div class="login-subtitle">Portal Akuntan Keuangan • 2026</div>
 
-        <form action="/dashboard" method="GET">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div style="background-color: #fee2e2; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; text-align: left;">
+                <i class="fa-solid fa-circle-exclamation" style="margin-right: 6px;"></i> {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="/" method="POST">
             <div class="form-group">
                 <label>Username / Email</label>
                 <div class="input-icon-wrapper">
                     <i class="fa-regular fa-user"></i>
-                    <input type="text" class="form-control" value="akuntan@sppgdebong.id" readonly>
+                    <input type="text" name="username" class="form-control" placeholder="Masukkan username/email" required>
                 </div>
             </div>
 
@@ -195,7 +205,7 @@
                 </label>
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-lock"></i>
-                    <input type="password" class="form-control" value="********" readonly>
+                    <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
                 </div>
             </div>
 

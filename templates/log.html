@@ -87,28 +87,28 @@
         
         <div class="progress-item">
             <div class="progress-label cat-pill karbo text-center">Karbohidrat</div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 80%; background: var(--color-karbo);"></div></div>
-            <div class="progress-value" style="color: var(--color-karbo);">1.247</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ stats.karbo.pct }}%; background: var(--color-karbo);"></div></div>
+            <div class="progress-value" style="color: var(--color-karbo);">{{ stats.karbo.val }}</div>
         </div>
         <div class="progress-item">
             <div class="progress-label cat-pill proth text-center">Prot. Hewani</div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 50%; background: var(--color-proth);"></div></div>
-            <div class="progress-value" style="color: var(--color-proth);">906</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ stats.proth.pct }}%; background: var(--color-proth);"></div></div>
+            <div class="progress-value" style="color: var(--color-proth);">{{ stats.proth.val }}</div>
         </div>
         <div class="progress-item">
             <div class="progress-label cat-pill protn text-center">Prot. Nabati</div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 45%; background: var(--color-protn);"></div></div>
-            <div class="progress-value" style="color: var(--color-protn);">765</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ stats.protn.pct }}%; background: var(--color-protn);"></div></div>
+            <div class="progress-value" style="color: var(--color-protn);">{{ stats.protn.val }}</div>
         </div>
         <div class="progress-item">
             <div class="progress-label cat-pill sayur text-center">Sayur</div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 70%; background: var(--color-sayur);"></div></div>
-            <div class="progress-value" style="color: var(--color-sayur);">1.044</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ stats.sayur.pct }}%; background: var(--color-sayur);"></div></div>
+            <div class="progress-value" style="color: var(--color-sayur);">{{ stats.sayur.val }}</div>
         </div>
         <div class="progress-item">
             <div class="progress-label cat-pill buah text-center">Buah</div>
-            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: 30%; background: var(--color-buah);"></div></div>
-            <div class="progress-value" style="color: var(--color-buah);">563</div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ stats.buah.pct }}%; background: var(--color-buah);"></div></div>
+            <div class="progress-value" style="color: var(--color-buah);">{{ stats.buah.val }}</div>
         </div>
     </div>
     
