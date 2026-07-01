@@ -24,11 +24,19 @@ def login_required(f):
 
 # Initialize Firebase
 try:
-    cred = credentials.Certificate('serviceAccountKey.json')
+    firebase_credentials = os.environ.get('FIREBASE_CREDENTIALS')
+    if firebase_credentials:
+        # Load from environment variable (Render)
+        cred_dict = json.loads(firebase_credentials)
+        cred = credentials.Certificate(cred_dict)
+    else:
+        # Load from file (Local)
+        cred = credentials.Certificate('serviceAccountKey.json')
+        
     firebase_admin.initialize_app(cred)
     db = firestore.client()
 except Exception as e:
-    print(f"Warning: Firebase initialization failed. Make sure serviceAccountKey.json exists. Error: {e}")
+    print(f"Warning: Firebase initialization failed. Error: {e}")
     db = None
 
 
