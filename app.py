@@ -599,7 +599,12 @@ def api_history():
         return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
         
     try:
-        docs = db.collection('scan_log').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50).stream()
+        nik = request.args.get('nik')
+        query = db.collection('scan_log')
+        if nik:
+            query = query.where('petugas_nik', '==', nik)
+        
+        docs = query.order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50).stream()
         history_data = []
         for d in docs:
             log_data = d.to_dict()
@@ -624,39 +629,45 @@ def api_history():
 
 @app.route('/api/queue', methods=['GET'])
 def api_queue():
-    # Return dummy queue data matching what the app previously mocked locally
+    nik = request.args.get('nik')
+    # Since queue (antrean) is usually local data awaiting sync, we return empty here 
+    # to let the mobile app start fresh for a newly logged in user.
+    # We could fetch unsynced items from DB if we tracked sync status there,
+    # but for now, returning empty ensures a new user doesn't see dummy data.
     return jsonify({
         'status': 'success',
-        'data': [
-            {'id': 'Q-001', 'nampanNumber': 1, 'queueTime': datetime.now().isoformat(), 'items': [], 'isSynced': True},
-            {'id': 'Q-002', 'nampanNumber': 45, 'queueTime': datetime.now().isoformat(), 'items': [], 'isSynced': True},
-        ]
+        'data': []
     }), 200
 
 @app.route('/api/food-categories', methods=['GET'])
 def api_food_categories():
+    nik = request.args.get('nik')
     categories = [
-      {
-        'id': 'karbo', 'name': 'Karbo', 'category': 'Karbohidrat',
-        'subtitle': 'Nasi, roti, mie', 'count': 89, 'color': 4293467747, 'emoji': '🍚'
-      },
-      {
-        'id': 'pro_hewani', 'name': 'P. Hewani', 'category': 'Protein Hewani',
-        'subtitle': 'Ayam, ikan, daging', 'count': 65, 'color': 4294198070, 'emoji': '🍗'
-      },
-      {
-        'id': 'pro_nabati', 'name': 'P. Nabati', 'category': 'Protein Nabati',
-        'subtitle': 'Tahu, tempe', 'count': 72, 'color': 4283215696, 'emoji': '🥬'
-      },
-      {
-        'id': 'sayur', 'name': 'Sayur', 'category': 'Sayuran',
-        'subtitle': 'Sayur mayur', 'count': 45, 'color': 4286105417, 'emoji': '🥗'
-      },
-      {
-        'id': 'buah', 'name': 'Buah', 'category': 'Buah-buahan',
-        'subtitle': 'Pisang, pepaya', 'count': 32, 'color': 4294940672, 'emoji': '🍌'
-      }
+      {'id': 'karbo', 'name': 'Karbo', 'category': 'Karbohidrat', 'subtitle': 'Nasi, roti, mie', 'count': 0, 'color': 4293467747, 'emoji': '🍚'},
+      {'id': 'pro_hewani', 'name': 'P. Hewani', 'category': 'Protein Hewani', 'subtitle': 'Ayam, ikan, daging', 'count': 0, 'color': 4294198070, 'emoji': '🍗'},
+      {'id': 'pro_nabati', 'name': 'P. Nabati', 'category': 'Protein Nabati', 'subtitle': 'Tahu, tempe', 'count': 0, 'color': 4283215696, 'emoji': '🥬'},
+      {'id': 'sayur', 'name': 'Sayur', 'category': 'Sayuran', 'subtitle': 'Sayur mayur', 'count': 0, 'color': 4286105417, 'emoji': '🥗'},
+      {'id': 'buah', 'name': 'Buah', 'category': 'Buah-buahan', 'subtitle': 'Pisang, pepaya', 'count': 0, 'color': 4294940672, 'emoji': '🍌'}
     ]
+    
+    if db and nik:
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        docs = db.collection('scan_log').where('petugas_nik', '==', nik).where('timestamp', '>=', today_start).stream()
+        
+        for d in docs:
+            log_data = d.to_dict()
+            items = []
+            if 'items_json' in log_data and log_data['items_json']:
+                items = json.loads(log_data['items_json'])
+            
+            for item in items:
+                cat_name = item.get('kategori')
+                qty = item.get('jumlah', 0)
+                for cat in categories:
+                    if cat['category'] == cat_name:
+                        cat['count'] += qty
+                        break
+                        
     return jsonify({
         'status': 'success',
         'data': categories
