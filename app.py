@@ -546,6 +546,7 @@ def api_menu():
     }), 200
 
 @app.route('/api/scan', methods=['POST'])
+@app.route('/api/scans', methods=['POST'])
 def api_scan():
     if not db:
         return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
@@ -590,6 +591,75 @@ def api_dashboard():
     return jsonify({
         'status': 'success',
         'data': data
+    }), 200
+
+@app.route('/api/history', methods=['GET'])
+def api_history():
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        docs = db.collection('scan_log').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50).stream()
+        history_data = []
+        for d in docs:
+            log_data = d.to_dict()
+            items = []
+            if 'items_json' in log_data and log_data['items_json']:
+                items = json.loads(log_data['items_json'])
+                
+            history_data.append({
+                'id': d.id,
+                'scanTime': log_data.get('timestamp').isoformat() if hasattr(log_data.get('timestamp'), 'isoformat') else str(log_data.get('timestamp')),
+                'detectedItems': items,
+                'shift': 'Shift Pagi', 
+                'nampanLabel': log_data.get('nampan_id', '')
+            })
+            
+        return jsonify({
+            'status': 'success',
+            'data': history_data
+        }), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/queue', methods=['GET'])
+def api_queue():
+    # Return dummy queue data matching what the app previously mocked locally
+    return jsonify({
+        'status': 'success',
+        'data': [
+            {'id': 'Q-001', 'nampanNumber': 1, 'queueTime': datetime.now().isoformat(), 'items': [], 'isSynced': True},
+            {'id': 'Q-002', 'nampanNumber': 45, 'queueTime': datetime.now().isoformat(), 'items': [], 'isSynced': True},
+        ]
+    }), 200
+
+@app.route('/api/food-categories', methods=['GET'])
+def api_food_categories():
+    categories = [
+      {
+        'id': 'karbo', 'name': 'Karbo', 'category': 'Karbohidrat',
+        'subtitle': 'Nasi, roti, mie', 'count': 89, 'color': 4293467747, 'emoji': '🍚'
+      },
+      {
+        'id': 'pro_hewani', 'name': 'P. Hewani', 'category': 'Protein Hewani',
+        'subtitle': 'Ayam, ikan, daging', 'count': 65, 'color': 4294198070, 'emoji': '🍗'
+      },
+      {
+        'id': 'pro_nabati', 'name': 'P. Nabati', 'category': 'Protein Nabati',
+        'subtitle': 'Tahu, tempe', 'count': 72, 'color': 4283215696, 'emoji': '🥬'
+      },
+      {
+        'id': 'sayur', 'name': 'Sayur', 'category': 'Sayuran',
+        'subtitle': 'Sayur mayur', 'count': 45, 'color': 4286105417, 'emoji': '🥗'
+      },
+      {
+        'id': 'buah', 'name': 'Buah', 'category': 'Buah-buahan',
+        'subtitle': 'Pisang, pepaya', 'count': 32, 'color': 4294940672, 'emoji': '🍌'
+      }
+    ]
+    return jsonify({
+        'status': 'success',
+        'data': categories
     }), 200
 
 if __name__ == '__main__':
