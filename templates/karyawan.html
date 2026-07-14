@@ -68,7 +68,7 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="search-input" placeholder="Cari nama / NIK...">
             </div>
-            <button class="btn btn-primary" onclick="document.getElementById('modalKaryawan').classList.add('active')"><i class="fa-solid fa-plus"></i> Tambah Karyawan Baru</button>
+            <button class="btn btn-primary" onclick="openAddKaryawanModal()"><i class="fa-solid fa-plus"></i> Tambah Karyawan Baru</button>
         </div>
     </div>
 
@@ -106,8 +106,8 @@
                         {% endif %}
                     </td>
                     <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-reset"><i class="fa-solid fa-key"></i> Reset PIN</button>
+                        <button class="table-action-btn btn-edit" onclick="editKaryawan('{{ kar.nik }}', '{{ kar.nama }}', '{{ kar.posisi }}', '{{ kar.shift_dominan }}', '{{ kar.pin }}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="table-action-btn btn-delete" onclick="deleteKaryawan('{{ kar.nik }}')" style="color: #dc2626; border: 1px solid #fecaca; background: #fef2f2; padding: 4px 8px; border-radius: 6px; cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -120,15 +120,16 @@
     </div>
 </div>
 
-<!-- Modal Tambah Karyawan -->
+<!-- Modal Tambah/Edit Karyawan -->
 <div class="modal-overlay" id="modalKaryawan">
     <div class="modal-content">
         <div class="modal-header">
-            <div class="modal-title">Tambah Karyawan Baru</div>
+            <div class="modal-title" id="modalKaryawanTitle">Tambah Karyawan Baru</div>
             <button class="btn-close" onclick="document.getElementById('modalKaryawan').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
         </div>
         
         <form id="formTambahKaryawan">
+            <input type="hidden" id="isEditKaryawan" value="0">
             <div class="grid-2-form">
                 <div class="form-group-modal">
                     <label>NIK Karyawan</label>
@@ -179,11 +180,53 @@
 </div>
 
 <script>
+function openAddKaryawanModal() {
+    document.getElementById('modalKaryawanTitle').innerText = 'Tambah Karyawan Baru';
+    document.getElementById('inputNik').value = '';
+    document.getElementById('inputNik').disabled = false;
+    document.getElementById('inputNama').value = '';
+    document.getElementById('inputPosisi').value = 'Petugas Dapur';
+    document.getElementById('inputShift').value = 'Pagi';
+    document.getElementById('inputPin').value = '';
+    document.getElementById('isEditKaryawan').value = '0';
+    document.getElementById('modalKaryawan').classList.add('active');
+}
+
+function editKaryawan(nik, nama, posisi, shift, pin) {
+    document.getElementById('modalKaryawanTitle').innerText = 'Edit Karyawan';
+    document.getElementById('inputNik').value = nik;
+    document.getElementById('inputNik').disabled = true; // NIK cannot be changed
+    document.getElementById('inputNama').value = nama;
+    document.getElementById('inputPosisi').value = posisi;
+    document.getElementById('inputShift').value = shift;
+    document.getElementById('inputPin').value = pin;
+    document.getElementById('isEditKaryawan').value = '1';
+    document.getElementById('modalKaryawan').classList.add('active');
+}
+
+function deleteKaryawan(nik) {
+    if (confirm('Apakah Anda yakin ingin menghapus karyawan ini?')) {
+        fetch(`/api/karyawan/delete/${nik}`, { method: 'DELETE' })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Gagal: ' + result.message);
+            }
+        });
+    }
+}
+
 document.getElementById('formTambahKaryawan').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    const isEdit = document.getElementById('isEditKaryawan').value === '1';
+    const nik = document.getElementById('inputNik').value;
+    const url = isEdit ? `/api/karyawan/update/${nik}` : '/api/karyawan/add';
+    
     const data = {
-        nik: document.getElementById('inputNik').value,
+        nik: nik,
         nama: document.getElementById('inputNama').value,
         posisi: document.getElementById('inputPosisi').value,
         shift_dominan: document.getElementById('inputShift').value,
@@ -196,7 +239,7 @@ document.getElementById('formTambahKaryawan').addEventListener('submit', functio
     btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
     btnSubmit.disabled = true;
     
-    fetch('/api/karyawan/add', {
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
