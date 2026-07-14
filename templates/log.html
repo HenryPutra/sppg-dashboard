@@ -146,7 +146,10 @@
             {% for scan in scans %}
             <div class="scan-item-log">
                 <div style="display:flex; gap: 24px; align-items:center;">
-                    <span style="font-size:13px; color:var(--text-muted); width:70px;">{{ scan.id }}</span>
+                    <div style="width:120px; display:flex; flex-direction:column; gap:2px;">
+                        <span style="font-size:13px; color:var(--text-main); font-weight:600;">{{ scan.id }}</span>
+                        <span style="font-size:11px; color:var(--text-muted);">{{ scan.petugas_nama }}</span>
+                    </div>
                     <span style="font-size:13px; color:var(--text-muted); width:40px;">{{ scan.time }}</span>
                     <div style="display:flex; gap:8px;">
                         {% for item in scan['items'] %}

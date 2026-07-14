@@ -454,11 +454,19 @@ def log_sinkronisasi():
         score = 100 - (scan_total * 5)
         if score < 0: score = 0
             
+        petugas_nama = 'Tidak diketahui'
+        for k in karyawans:
+            if k.nik == s.petugas_nik:
+                petugas_nama = k.nama
+                break
+                
         scans.append({
             'id': s.nampan_id,
             'time': time_str,
             'items': formatted_items,
-            'pct': f'{score}%'
+            'pct': f'{score}%',
+            'petugas_nik': s.petugas_nik,
+            'petugas_nama': petugas_nama
         })
         
     total_all = sum(cat_totals.values())
