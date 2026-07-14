@@ -79,7 +79,9 @@ def calculate_dashboard_stats(nik=None):
         formatted_items = []
         scan_total_items = 0
         for i in items:
-            name = i.get('kategori', '')
+            name = i.get('kategori', i.get('category', i.get('name', '')))
+            if name == 'Prot. Nabati' or name == 'Tempe/\\nTahu':
+                name = 'Protein Nabati'
             short_name = name
             color = 'blue'
             if name == 'Karbohidrat': short_name = 'Karbo'; color = 'blue'
@@ -88,7 +90,7 @@ def calculate_dashboard_stats(nik=None):
             elif name == 'Sayur': short_name = 'Sayur'; color = 'green'
             elif name == 'Buah': short_name = 'Buah'; color = 'yellow'
             
-            qty = i.get('jumlah', 0)
+            qty = int(i.get('jumlah', i.get('count', 0)))
             scan_total_items += qty
             formatted_items.append({'name': short_name, 'qty': qty, 'color': color})
             
@@ -115,8 +117,10 @@ def calculate_dashboard_stats(nik=None):
     for s in today_scans:
         items = json.loads(s.items_json) if s.items_json else []
         for i in items:
-            cat = i.get('kategori')
-            qty = i.get('jumlah', 0)
+            cat = i.get('kategori', i.get('category', i.get('name', '')))
+            if cat == 'Prot. Nabati' or cat == 'Tempe/\\nTahu':
+                cat = 'Protein Nabati'
+            qty = int(i.get('jumlah', i.get('count', 0)))
             if cat in cat_counts:
                 cat_counts[cat] += qty
                 
