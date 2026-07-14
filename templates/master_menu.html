@@ -67,7 +67,7 @@
                 <input type="text" class="search-input" placeholder="Cari nama menu...">
             </div>
             <select class="form-control-modal" style="width: auto; padding: 8px 12px;"><option>Semua Shift</option></select>
-            <button class="btn btn-primary" onclick="document.getElementById('modalMenu').classList.add('active')"><i class="fa-solid fa-plus"></i> Tambah Menu Harian</button>
+            <button class="btn btn-primary" onclick="openAddMenuModal()"><i class="fa-solid fa-plus"></i> Tambah Menu Harian</button>
         </div>
     </div>
 
@@ -102,8 +102,8 @@
                     <td {% if menu.sayur_gr %}style="color: var(--color-sayur); font-weight: 500;"{% else %}style="color: var(--text-muted);"{% endif %}>{{ menu.sayur_gr if menu.sayur_gr else '—' }}</td>
                     <td {% if menu.buah_gr %}style="color: #ca8a04; font-weight: 500;"{% else %}style="color: var(--text-muted);"{% endif %}>{{ menu.buah_gr if menu.buah_gr else '—' }}</td>
                     <td style="background: #f8fafc;">
-                        <button class="table-action-btn btn-edit"><i class="fa-solid fa-pen"></i></button>
-                        <button class="table-action-btn btn-delete"><i class="fa-solid fa-trash"></i></button>
+                        <button class="table-action-btn btn-edit" onclick="editMenu(`{{ menu.id }}`, `{{ menu.nama_menu }}`, `{{ menu.tanggal }}`, `{{ menu.shift }}`, `{{ menu.sasaran }}`, `{{ menu.total_porsi or '' }}`, `{{ menu.karbo_gr or '' }}`, `{{ menu.proth_gr or '' }}`, `{{ menu.protn_gr or '' }}`, `{{ menu.sayur_gr or '' }}`, `{{ menu.buah_gr or '' }}`)"><i class="fa-solid fa-pen"></i></button>
+                        <button class="table-action-btn btn-delete" onclick="deleteMenu('{{ menu.id }}')"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -117,13 +117,15 @@
     </div>
 </div>
 
-<!-- Modal Tambah Menu -->
+<!-- Modal Tambah/Edit Menu -->
 <div class="modal-overlay" id="modalMenu">
     <div class="modal-content">
         <div class="modal-header">
-            <div class="modal-title">Tambah Menu Harian Baru</div>
-            <button class="btn-close" onclick="document.getElementById('modalMenu').classList.remove('active')"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-title" id="modalMenuTitle">Tambah Menu Harian Baru</div>
+            <button class="btn-close" onclick="closeMenuModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
+        
+        <input type="hidden" id="inputMenuId">
         
         <div class="form-group-modal">
             <label>Nama menu</label>
@@ -188,7 +190,7 @@
         </div>
         
         <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px;">
-            <button class="btn btn-outline" onclick="document.getElementById('modalMenu').classList.remove('active')">Batal</button>
+            <button class="btn btn-outline" onclick="closeMenuModal()">Batal</button>
             <button class="btn btn-primary" id="btnSimpanMenu" onclick="simpanMenu()"><i class="fa-solid fa-check"></i> Simpan Menu</button>
         </div>
     </div>
@@ -197,7 +199,53 @@
 
 {% block extra_js %}
 <script>
+function closeMenuModal() {
+    document.getElementById('modalMenu').classList.remove('active');
+    document.getElementById('inputMenuId').value = '';
+    document.getElementById('inputMenuNama').value = '';
+    // Reset other fields as needed
+}
+
+function openAddMenuModal() {
+    closeMenuModal(); // Reset fields
+    document.getElementById('modalMenuTitle').innerText = 'Tambah Menu Harian Baru';
+    document.getElementById('modalMenu').classList.add('active');
+}
+
+function editMenu(id, nama, tanggal, shift, sasaran, porsi, karbo, proth, protn, sayur, buah) {
+    document.getElementById('modalMenuTitle').innerText = 'Edit Menu Harian';
+    document.getElementById('inputMenuId').value = id;
+    document.getElementById('inputMenuNama').value = nama;
+    document.getElementById('inputMenuTanggal').value = tanggal;
+    document.getElementById('inputMenuShift').value = shift;
+    document.getElementById('inputMenuSasaran').value = sasaran;
+    document.getElementById('inputMenuPorsi').value = porsi;
+    document.getElementById('inputMenuKarbo').value = karbo;
+    document.getElementById('inputMenuProth').value = proth;
+    document.getElementById('inputMenuProtn').value = protn;
+    document.getElementById('inputMenuSayur').value = sayur;
+    document.getElementById('inputMenuBuah').value = buah;
+    document.getElementById('modalMenu').classList.add('active');
+}
+
+function deleteMenu(id) {
+    if (confirm('Apakah Anda yakin ingin menghapus menu ini?')) {
+        fetch(`/api/menu/delete/${id}`, { method: 'DELETE' })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Gagal: ' + result.message);
+            }
+        });
+    }
+}
+
 function simpanMenu() {
+    const id = document.getElementById('inputMenuId').value;
+    const url = id ? `/api/menu/update/${id}` : '/api/menu/add';
+    
     const data = {
         nama_menu: document.getElementById('inputMenuNama').value,
         tanggal: document.getElementById('inputMenuTanggal').value,
@@ -221,7 +269,7 @@ function simpanMenu() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...';
     btn.disabled = true;
     
-    fetch('/api/menu/add', {
+    fetch(url, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
