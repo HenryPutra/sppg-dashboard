@@ -429,8 +429,8 @@ def log_sinkronisasi():
         formatted_items = []
         scan_total = 0
         for i in items:
-            name = i.get('kategori', '')
-            qty = i.get('jumlah', 0)
+            name = i.get('kategori', i.get('category', i.get('name', '')))
+            qty = int(i.get('jumlah', i.get('count', 0)))
             scan_total += qty
             if name in cat_totals:
                 cat_totals[name] += qty
@@ -870,8 +870,8 @@ def api_food_categories():
                 items = json.loads(log_data['items_json'])
             
             for item in items:
-                cat_name = item.get('kategori')
-                qty = item.get('jumlah', 0)
+                cat_name = item.get('kategori', item.get('category', item.get('name', '')))
+                qty = int(item.get('jumlah', item.get('count', 0)))
                 for cat in categories:
                     if cat['category'] == cat_name:
                         cat['count'] += qty
