@@ -749,10 +749,14 @@ def api_scan():
         return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
         
     data = request.get_json()
-    if not data or 'nampan_id' not in data or 'items' not in data:
+    if not data or 'items' not in data:
         return jsonify({'status': 'error', 'message': 'Format data tidak valid'}), 400
     
-    petugas_nik = data.get('petugas_nik')
+    petugas_nik = data.get('petugas_nik') or 'NIK-2024-087'
+    nampan_id = data.get('nampan_id')
+    if not nampan_id:
+        nampan_id = f"NMP-{int(datetime.now().timestamp() * 1000)}"
+        
     timestamp_str = data.get('timestamp')
     
     try:
@@ -761,7 +765,7 @@ def api_scan():
         scan_time = datetime.now()
         
     new_scan = ScanLog(
-        nampan_id=data['nampan_id'],
+        nampan_id=nampan_id,
         timestamp=scan_time,
         petugas_nik=petugas_nik,
         items=data['items']
@@ -774,7 +778,7 @@ def api_scan():
         
     return jsonify({
         'status': 'success',
-        'message': f"Data scan untuk nampan {data['nampan_id']} berhasil diterima dan disimpan",
+        'message': f"Data scan untuk nampan {nampan_id} berhasil diterima dan disimpan",
         'received_items': len(data['items'])
     }), 201
 
