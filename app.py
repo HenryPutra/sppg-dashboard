@@ -222,18 +222,77 @@ def dashboard():
 @app.route('/formulir')
 @login_required
 def formulir():
+    filter_type = request.args.get('filter_type', 'hari')
+    filter_date = request.args.get('filter_date', datetime.now().strftime('%Y-%m-%d'))
+    filter_month = request.args.get('filter_month', datetime.now().strftime('%Y-%m'))
+    
+    # Handle week format (e.g. 2026-W24)
+    filter_week = request.args.get('filter_week')
+    if not filter_week:
+        d = datetime.now()
+        filter_week = f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+
     formulir_data = []
     if db:
-        # For simplicity in this dashboard, get recent menus
+        docs = db.collection('menu_harian').order_by('tanggal', direction=firestore.Query.DESCENDING).stream()
         menus = []
-        docs = db.collection('menu_harian').order_by('tanggal', direction=firestore.Query.DESCENDING).limit(30).stream()
         for doc in docs:
-            menus.append(MenuHarian.from_dict(doc.to_dict(), doc_id=doc.id))
+            m = MenuHarian.from_dict(doc.to_dict(), doc_id=doc.id)
+            if not m.tanggal: continue
+            
+            if filter_type == 'hari':
+                if m.tanggal == filter_date:
+                    menus.append(m)
+            elif filter_type == 'bulan':
+                if m.tanggal.startswith(filter_month):
+                    menus.append(m)
+            elif filter_type == 'minggu':
+                try:
+                    d = datetime.strptime(m.tanggal, '%Y-%m-%d')
+                    week_str = f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+                    if week_str == filter_week:
+                        menus.append(m)
+                except:
+                    pass
             
         all_scans = []
         scan_docs = db.collection('scan_log').stream()
         for sdoc in scan_docs:
             all_scans.append(ScanLog.from_dict(sdoc.to_dict(), sdoc.id))
+            
+        menu_dates = {m.tanggal for m in menus if m.tanggal}
+        scan_dates_to_add = set()
+        
+        for scan in all_scans:
+            scan_date = scan.timestamp.strftime('%Y-%m-%d') if hasattr(scan.timestamp, 'strftime') else (scan.timestamp.split('T')[0] if isinstance(scan.timestamp, str) else None)
+            if not scan_date: continue
+            
+            if scan_date not in menu_dates:
+                match = False
+                if filter_type == 'hari' and scan_date == filter_date: match = True
+                elif filter_type == 'bulan' and scan_date.startswith(filter_month): match = True
+                elif filter_type == 'minggu':
+                    try:
+                        d = datetime.strptime(scan_date, '%Y-%m-%d')
+                        week_str = f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+                        if week_str == filter_week: match = True
+                    except: pass
+                
+                if match:
+                    scan_dates_to_add.add(scan_date)
+                    
+        for d_date in scan_dates_to_add:
+            dummy_menu = MenuHarian(
+                nama_menu="Data Log (Belum ada Menu)",
+                tanggal=d_date,
+                sasaran="-",
+                total_porsi=0,
+                karbo_gr=0, proth_gr=0, protn_gr=0, sayur_gr=0, buah_gr=0
+            )
+            menus.append(dummy_menu)
+            menu_dates.add(d_date)
+            
+        menus.sort(key=lambda x: x.tanggal if x.tanggal else "", reverse=True)
             
         for menu in menus:
             # Brt Masak
@@ -241,6 +300,7 @@ def formulir():
             proth_ms = menu.proth_gr or 0
             protn_ms = menu.protn_gr or 0
             sayur_ms = menu.sayur_gr or 0
+            buah_ms = menu.buah_gr or 0
             
             porsi = menu.total_porsi or 0
             
@@ -249,6 +309,7 @@ def formulir():
             proth_tot = (proth_ms * porsi) / 1000
             protn_tot = (protn_ms * porsi) / 1000
             sayur_tot = (sayur_ms * porsi) / 1000
+            buah_tot = (buah_ms * porsi) / 1000
             
             # Count waste from scans on that date
             menu_date = menu.tanggal
@@ -256,6 +317,7 @@ def formulir():
             proth_waste = 0
             protn_waste = 0
             sayur_waste = 0
+            buah_waste = 0
             
             if menu_date:
                 for scan in all_scans:
@@ -270,12 +332,19 @@ def formulir():
                             elif cat == 'Protein Hewani': proth_waste += qty
                             elif cat == 'Protein Nabati': protn_waste += qty
                             elif cat == 'Sayur': sayur_waste += qty
+                            elif cat == 'Buah': buah_waste += qty
             
             weight_per_item = 0.05 # 50g per item
             karbo_sisa = karbo_waste * weight_per_item
             proth_sisa = proth_waste * weight_per_item
             protn_sisa = protn_waste * weight_per_item
             sayur_sisa = sayur_waste * weight_per_item
+            buah_sisa = buah_waste * weight_per_item
+            
+            total_ms = karbo_ms + proth_ms + protn_ms + sayur_ms + buah_ms
+            total_tot = karbo_tot + proth_tot + protn_tot + sayur_tot + buah_tot
+            total_sisa = karbo_sisa + proth_sisa + protn_sisa + sayur_sisa + buah_sisa
+            total_pct = (total_sisa / total_tot * 100) if total_tot > 0 else 0
             
             formulir_data.append({
                 'tanggal_fmt': menu_date,
@@ -294,18 +363,60 @@ def formulir():
                 
                 'sayur_ms': sayur_ms, 'sayur_tot': sayur_tot, 'sayur_sisa': sayur_sisa,
                 'sayur_pct': (sayur_sisa / sayur_tot * 100) if sayur_tot > 0 else 0,
+
+                'buah_ms': buah_ms, 'buah_tot': buah_tot, 'buah_sisa': buah_sisa,
+                'buah_pct': (buah_sisa / buah_tot * 100) if buah_tot > 0 else 0,
+
+                'total_ms': total_ms, 'total_tot': total_tot, 'total_sisa': total_sisa,
+                'total_pct': total_pct,
             })
             
-    return render_template('formulir.html', data=formulir_data)
+    return render_template('formulir.html', data=formulir_data, filter_type=filter_type, filter_date=filter_date, filter_week=filter_week, filter_month=filter_month)
 
 @app.route('/log-sinkronisasi')
 @login_required
 def log_sinkronisasi():
-    db_scans = []
+    filter_date = request.args.get('filter_date', datetime.now().strftime('%Y-%m-%d'))
+    filter_shift = request.args.get('filter_shift', 'Semua Shift')
+    filter_petugas = request.args.get('filter_petugas', 'Semua Petugas')
+    search_nampan = request.args.get('search_nampan', '')
+
+    db_scans_raw = []
+    karyawans = []
     if db:
         docs = db.collection('scan_log').order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
         for doc in docs:
-            db_scans.append(ScanLog.from_dict(doc.to_dict(), doc_id=doc.id))
+            db_scans_raw.append(ScanLog.from_dict(doc.to_dict(), doc_id=doc.id))
+            
+        k_docs = db.collection('karyawan').stream()
+        for kd in k_docs:
+            karyawans.append(Karyawan.from_dict(kd.to_dict(), doc_id=kd.id))
+            
+    db_scans = []
+    for s in db_scans_raw:
+        # filter date
+        scan_date = s.timestamp.strftime('%Y-%m-%d') if hasattr(s.timestamp, 'strftime') else (s.timestamp.split('T')[0] if isinstance(s.timestamp, str) else None)
+        if filter_date and scan_date != filter_date:
+            continue
+            
+        # filter shift
+        if filter_shift != 'Semua Shift':
+            scan_time = s.timestamp.strftime('%H:%M') if hasattr(s.timestamp, 'strftime') else (s.timestamp.split('T')[1][:5] if isinstance(s.timestamp, str) and 'T' in s.timestamp else "00:00")
+            h = int(scan_time.split(':')[0]) if ':' in scan_time else 0
+            shift = 'Pagi' if 6 <= h < 14 else ('Siang' if 14 <= h < 22 else 'Malam')
+            if filter_shift != shift:
+                continue
+                
+        # filter petugas
+        if filter_petugas != 'Semua Petugas':
+            if s.petugas_nik != filter_petugas:
+                continue
+                
+        # search nampan
+        if search_nampan and search_nampan.lower() not in (s.nampan_id or '').lower():
+            continue
+            
+        db_scans.append(s)
             
     cat_totals = {'Karbohidrat': 0, 'Protein Hewani': 0, 'Protein Nabati': 0, 'Sayur': 0, 'Buah': 0}
             
@@ -357,7 +468,7 @@ def log_sinkronisasi():
         'buah': {'val': cat_totals['Buah'], 'pct': (cat_totals['Buah'] / total_all * 100) if total_all > 0 else 0},
     }
         
-    return render_template('log.html', scans=scans, stats=stats)
+    return render_template('log.html', scans=scans, stats=stats, filter_date=filter_date, filter_shift=filter_shift, filter_petugas=filter_petugas, search_nampan=search_nampan, karyawans=karyawans)
 
 @app.route('/master-menu')
 @login_required
@@ -479,6 +590,89 @@ def add_menu():
         
         db.collection('menu_harian').add(new_menu.to_dict())
         return jsonify({'status': 'success', 'message': 'Menu berhasil ditambahkan'}), 201
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/karyawan/update/<nik>', methods=['POST'])
+@login_required
+def update_karyawan(nik):
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        data = request.get_json()
+        doc_ref = db.collection('karyawan').document(nik)
+        if not doc_ref.get().exists:
+            return jsonify({'status': 'error', 'message': 'Karyawan tidak ditemukan'}), 404
+            
+        update_data = {
+            'nama': data.get('nama'),
+            'posisi': data.get('posisi'),
+            'shift_dominan': data.get('shift_dominan'),
+            'pin': data.get('pin')
+        }
+        # filter out none
+        update_data = {k: v for k, v in update_data.items() if v is not None}
+        if 'is_active' in data:
+            update_data['is_active'] = data['is_active']
+            
+        doc_ref.update(update_data)
+        return jsonify({'status': 'success', 'message': 'Data karyawan berhasil diperbarui'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/karyawan/delete/<nik>', methods=['DELETE'])
+@login_required
+def delete_karyawan(nik):
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        db.collection('karyawan').document(nik).delete()
+        return jsonify({'status': 'success', 'message': 'Karyawan berhasil dihapus'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/menu/update/<menu_id>', methods=['POST'])
+@login_required
+def update_menu_api(menu_id):
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        data = request.get_json()
+        doc_ref = db.collection('menu_harian').document(menu_id)
+        if not doc_ref.get().exists:
+            return jsonify({'status': 'error', 'message': 'Menu tidak ditemukan'}), 404
+            
+        update_data = {
+            'nama_menu': data.get('nama_menu'),
+            'tanggal': data.get('tanggal'),
+            'shift': data.get('shift'),
+            'sasaran': data.get('sasaran'),
+            'total_porsi': int(data.get('total_porsi', 0)) if data.get('total_porsi') else None,
+            'karbo_gr': int(data.get('karbo_gr')) if data.get('karbo_gr') else None,
+            'proth_gr': int(data.get('proth_gr')) if data.get('proth_gr') else None,
+            'protn_gr': int(data.get('protn_gr')) if data.get('protn_gr') else None,
+            'sayur_gr': int(data.get('sayur_gr')) if data.get('sayur_gr') else None,
+            'buah_gr': int(data.get('buah_gr')) if data.get('buah_gr') else None
+        }
+        update_data = {k: v for k, v in update_data.items() if v is not None}
+        
+        doc_ref.update(update_data)
+        return jsonify({'status': 'success', 'message': 'Menu berhasil diperbarui'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/menu/delete/<menu_id>', methods=['DELETE'])
+@login_required
+def delete_menu_api(menu_id):
+    if not db:
+        return jsonify({'status': 'error', 'message': 'Database tidak terhubung'}), 500
+        
+    try:
+        db.collection('menu_harian').document(menu_id).delete()
+        return jsonify({'status': 'success', 'message': 'Menu berhasil dihapus'}), 200
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
