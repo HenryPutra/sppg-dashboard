@@ -66,20 +66,32 @@
 {% endblock %}
 
 {% block content %}
-<div class="filter-row">
+<form method="GET" action="{{ url_for('log_sinkronisasi') }}" class="filter-row">
     <div class="filter-group">
-        <button class="filter-control"><i class="fa-solid fa-filter" style="color:var(--text-muted)"></i> 10/06/2026 <i class="fa-regular fa-calendar" style="margin-left:8px;color:var(--text-muted)"></i></button>
-        <select class="filter-control"><option>Semua Shift</option></select>
-        <select class="filter-control"><option>Semua Petugas</option></select>
+        <div class="filter-control" style="padding:0; overflow:hidden;">
+            <input type="date" name="filter_date" value="{{ filter_date }}" onchange="this.form.submit()" style="border:none; outline:none; padding:8px 12px; background:transparent; font-size:13px; color:var(--text-main); font-family:inherit;">
+        </div>
+        <select name="filter_shift" class="filter-control" onchange="this.form.submit()">
+            <option value="Semua Shift" {% if filter_shift == 'Semua Shift' %}selected{% endif %}>Semua Shift</option>
+            <option value="Pagi" {% if filter_shift == 'Pagi' %}selected{% endif %}>Shift Pagi (06-14)</option>
+            <option value="Siang" {% if filter_shift == 'Siang' %}selected{% endif %}>Shift Siang (14-22)</option>
+            <option value="Malam" {% if filter_shift == 'Malam' %}selected{% endif %}>Shift Malam (22-06)</option>
+        </select>
+        <select name="filter_petugas" class="filter-control" onchange="this.form.submit()">
+            <option value="Semua Petugas" {% if filter_petugas == 'Semua Petugas' %}selected{% endif %}>Semua Petugas</option>
+            {% for k in karyawans %}
+            <option value="{{ k.nik }}" {% if filter_petugas == k.nik %}selected{% endif %}>{{ k.nama }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="filter-group">
         <div class="filter-control" style="cursor:text; padding:0;">
             <i class="fa-solid fa-magnifying-glass" style="padding-left:12px; color:var(--text-muted)"></i>
-            <input type="text" placeholder="Cari ID nampan..." style="border:none; outline:none; padding:8px; background:transparent; font-size:13px; width: 200px;">
+            <input type="text" name="search_nampan" value="{{ search_nampan }}" placeholder="Cari ID nampan..." style="border:none; outline:none; padding:8px; background:transparent; font-size:13px; width: 200px;" onkeydown="if(event.key === 'Enter'){this.form.submit();}">
         </div>
-        <button class="btn btn-primary"><i class="fa-solid fa-file-export"></i> Konversi ke Form SPPG</button>
+        <a href="{{ url_for('formulir', filter_type='hari', filter_date=filter_date) }}" class="btn btn-primary"><i class="fa-solid fa-file-export"></i> Konversi ke Form SPPG</a>
     </div>
-</div>
+</form>
 
 <div class="grid-2-log">
     <div class="card" style="margin-bottom:0;">
@@ -116,7 +128,7 @@
         <i class="fa-solid fa-arrows-spin" style="font-size:32px; color:var(--primary-blue); margin-bottom:16px;"></i>
         <h3 style="font-size:16px; margin-bottom:8px;">Siap dikonversi ke Formulir SPPG</h3>
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:24px;">Sistem akan mengalikan item AI dengan berat standar per kategori (dari W04) lalu mengisi otomatis tabel formulir.</p>
-        <button class="btn btn-primary"><i class="fa-solid fa-file-lines"></i> Proses & Konversi Sekarang</button>
+        <a href="{{ url_for('formulir') }}" class="btn btn-primary"><i class="fa-solid fa-file-lines"></i> Proses & Konversi Sekarang</a>
     </div>
 </div>
 
@@ -124,23 +136,31 @@
     <h3 class="card-title" style="margin-bottom: 4px;">Log raw data per nampan <span style="font-weight:400; font-size:13px; color:var(--text-muted); margin-left:8px;">{{ scans|length }} entri hari ini</span></h3>
     
     <div class="scan-list-log" style="margin-top: 16px;">
-
-        {% for scan in scans %}
-        <div class="scan-item-log">
-            <div style="display:flex; gap: 24px; align-items:center;">
-                <span style="font-size:13px; color:var(--text-muted); width:70px;">{{ scan.id }}</span>
-                <span style="font-size:13px; color:var(--text-muted); width:40px;">{{ scan.time }}</span>
-                <div style="display:flex; gap:8px;">
-                    {% for item in scan['items'] %}
-                    <span class="cat-pill {{ item.c }}">{{ item.n }}: {{ item.q }}</span>
-                    {% endfor %}
-                </div>
-            </div>
-            <div style="font-size:13px; color:var(--text-muted); font-weight:600;">{{ scan.pct }}</div>
+        {% if not scans %}
+        <div style="text-align: center; padding: 48px 24px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1; margin-top: 16px;">
+            <i class="fa-solid fa-folder-open" style="font-size: 36px; color: #94a3b8; margin-bottom: 16px;"></i>
+            <h3 style="font-size: 15px; color: #475569; margin-bottom: 8px; font-weight: 600;">Data Masih Kosong</h3>
+            <p style="font-size: 13px; color: #64748b;">Tidak ada data log sinkronisasi yang sesuai dengan filter Anda. Coba ubah tanggal, shift, atau petugas.</p>
         </div>
-        {% endfor %}
+        {% else %}
+            {% for scan in scans %}
+            <div class="scan-item-log">
+                <div style="display:flex; gap: 24px; align-items:center;">
+                    <span style="font-size:13px; color:var(--text-muted); width:70px;">{{ scan.id }}</span>
+                    <span style="font-size:13px; color:var(--text-muted); width:40px;">{{ scan.time }}</span>
+                    <div style="display:flex; gap:8px;">
+                        {% for item in scan['items'] %}
+                        <span class="cat-pill {{ item.c }}">{{ item.n }}: {{ item.q }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div style="font-size:13px; color:var(--text-muted); font-weight:600;">{{ scan.pct }}</div>
+            </div>
+            {% endfor %}
+        {% endif %}
     </div>
 
+    {% if scans %}
     <div class="pagination">
         <div class="page-info">Menampilkan 1–{{ scans|length }} dari {{ scans|length }} entri</div>
         <button class="page-btn"><i class="fa-solid fa-chevron-left"></i></button>
@@ -148,5 +168,6 @@
         <button class="page-btn">2</button>
         <button class="page-btn"><i class="fa-solid fa-chevron-right"></i></button>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
