@@ -2,7 +2,7 @@
 
 {% block extra_css %}
 <style>
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     
     .stat-card { display: flex; flex-direction: column; }
@@ -41,13 +41,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="grid-4">
-    <div class="card stat-card">
-        <div class="stat-icon red"><i class="fa-solid fa-money-bill"></i></div>
-        <div class="stat-value" style="color: var(--color-proth);">{{ data.total_value }}</div>
-        <div class="stat-label">Estimasi nilai sisa hari ini</div>
-        <div><span class="trend-badge up-red">{{ data.value_change }}</span></div>
-    </div>
+<div class="grid-3">
     <div class="card stat-card">
         <div class="stat-icon blue"><i class="fa-solid fa-weight-scale"></i></div>
         <div class="stat-value" style="color: var(--primary-blue);">{{ data.total_waste }}</div>
