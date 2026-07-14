@@ -26,166 +26,207 @@
     .btn-excel { background: #dcfce7; color: #166534; }
     .btn-pdf { background: #fee2e2; color: #991b1b; }
     
-    .form-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; overflow-x: auto; }
+    .form-container { background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; overflow-x: auto; margin-bottom: 24px; }
     
-    .form-header-title { text-align: center; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
-    .form-header-subtitle { text-align: center; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+    .form-header-title { text-align: center; font-weight: 700; font-size: 16px; margin-bottom: 4px; color: black; }
+    .form-header-subtitle { text-align: center; font-size: 14px; margin-bottom: 24px; font-weight: 600; color: black; }
     
-    .sppg-table { width: 100%; border-collapse: collapse; min-width: 1200px; font-size: 12px; }
-    .sppg-table th, .sppg-table td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: center; }
+    .sppg-table { width: 100%; border-collapse: collapse; min-width: 800px; font-size: 12px; }
+    .sppg-table th, .sppg-table td { border: 1px solid black; padding: 8px 12px; text-align: center; color: black; }
     
-    .sppg-table th { font-weight: 600; color: var(--text-main); }
-    .sppg-table .th-karbo { background: var(--color-karbo-bg); }
-    .sppg-table .th-proth { background: var(--color-proth-bg); }
-    .sppg-table .th-protn { background: var(--color-protn-bg); }
-    .sppg-table .th-sayur { background: var(--color-sayur-bg); }
-    .sppg-table .th-buah { background: var(--color-buah-bg); }
+    .sppg-table th { font-weight: bold; background-color: white; }
     
-    .sppg-table .row-total td { font-weight: 700; background: #f8fafc; }
+    .sppg-table .row-total td { font-weight: bold; }
     
-    .form-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 32px; font-size: 12px; }
-    .sign-area { text-align: center; }
-    .sign-title { color: var(--text-muted); margin-bottom: 32px; }
-    .sign-name { font-weight: 600; text-decoration: underline; }
+    .form-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; font-size: 13px; font-weight: bold; color: black; }
     
-    .legend { display: flex; gap: 16px; align-items: center; }
-    .legend-item { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
-    .legend-box { width: 16px; height: 16px; border-radius: 4px; }
-    .lb-normal { background: var(--color-sayur-bg); border: 1px solid #bbf7d0; }
-    .lb-perhatian { background: var(--color-buah-bg); border: 1px solid #fef08a; }
-    .lb-kritis { background: var(--color-proth-bg); border: 1px solid #fecaca; }
+    .sign-input {
+        border: none;
+        border-bottom: 1px solid black;
+        width: 150px;
+        outline: none;
+        font-weight: normal;
+        font-family: inherit;
+        font-size: 13px;
+        background: transparent;
+    }
+
+    /* Print styles */
+    @media print {
+        @page { size: landscape; margin: 1cm; }
+        body { background: white; margin: 0; padding: 0; }
+        .sidebar, .top-nav, .filter-bar { display: none !important; }
+        .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        .form-container { border: none; padding: 0; width: 100% !important; margin: 0 auto; }
+        .form-header-title, .form-header-subtitle { text-align: center !important; width: 100% !important; display: block !important; }
+        .btn-pdf, .btn-excel, .btn-search { display: none !important; }
+        .sppg-table { width: 100% !important; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="filter-bar">
+<form method="GET" action="{{ url_for('formulir') }}" class="filter-bar" id="filterForm">
     <i class="fa-solid fa-filter" style="color: var(--text-muted);"></i>
     <span style="font-size: 13px; font-weight: 500;">Filter:</span>
-    <select class="filter-select"><option>Juni 2026</option></select>
-    <select class="filter-select"><option>10/06/2026</option></select>
-    <select class="filter-select"><option>Semua Nama Menu</option></select>
-    <select class="filter-select"><option>Semua Sasaran</option></select>
+    <select name="filter_type" class="filter-select" id="filter_type" onchange="toggleFilterInputs()">
+        <option value="hari" {% if filter_type == 'hari' %}selected{% endif %}>Per Hari</option>
+        <option value="minggu" {% if filter_type == 'minggu' %}selected{% endif %}>Per Minggu</option>
+        <option value="bulan" {% if filter_type == 'bulan' %}selected{% endif %}>Per Bulan</option>
+    </select>
     
-    <button class="btn-icon-text btn-search"><i class="fa-solid fa-magnifying-glass"></i> Tampilkan</button>
-    <button class="btn-icon-text btn-excel"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
-    <button class="btn-icon-text btn-pdf"><i class="fa-solid fa-file-pdf"></i> Cetak PDF</button>
-</div>
+    <input type="date" name="filter_date" id="filter_date" class="filter-select" value="{{ filter_date }}" style="display: none;">
+    <input type="week" name="filter_week" id="filter_week" class="filter-select" value="{{ filter_week }}" style="display: none;">
+    <input type="month" name="filter_month" id="filter_month" class="filter-select" value="{{ filter_month }}" style="display: none;">
+    
+    <button type="submit" class="btn-icon-text btn-search"><i class="fa-solid fa-magnifying-glass"></i> Tampilkan</button>
+    <button type="button" class="btn-icon-text btn-excel" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+    <button type="button" class="btn-icon-text btn-pdf" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> Cetak PDF</button>
+</form>
 
 <div class="form-container">
-    <div class="form-header-title">FORMULIR PENGUKURAN VOLUME SISA MAKANAN</div>
-    <div class="form-header-subtitle">SPPG Debong Kulon - Yayasan Kelud Insan Mandiri - Bulan Juni 2026 - Sasaran: Siswa SD N 1 Debong (820 siswa)</div>
+    <div class="form-header-title">Formulir Pengukuran Volume Sisa Makanan Tahun 2026</div>
+    <div class="form-header-subtitle">Satuan Pelayanan Pemenuhan Gizi (SPPG) DEBONG KULON - Kota Tegal</div>
     
-    <table class="sppg-table">
-        <thead>
-            <tr>
-                <th rowspan="2">Tgl</th>
-                <th rowspan="2">Nama Menu</th>
-                <th rowspan="2">Sasaran</th>
-                <th colspan="4" class="th-karbo">Karbohidrat</th>
-                <th colspan="4" class="th-proth">Protein Hewani</th>
-                <th colspan="4" class="th-protn">Protein Nabati</th>
-                <th colspan="4" class="th-sayur">Sayur</th>
-            </tr>
-            <tr>
-                <!-- Karbo -->
-                <th class="th-karbo">Brt Masak (gr)</th><th class="th-karbo">Brt Total (kg)</th><th class="th-karbo">Sisa (kg)</th><th class="th-karbo">%</th>
-                <!-- Prot H -->
-                <th class="th-proth">Brt Masak (gr)</th><th class="th-proth">Brt Total (kg)</th><th class="th-proth">Sisa (kg)</th><th class="th-proth">%</th>
-                <!-- Prot N -->
-                <th class="th-protn">Brt Masak (gr)</th><th class="th-protn">Brt Total (kg)</th><th class="th-protn">Sisa (kg)</th><th class="th-protn">%</th>
-                <!-- Sayur -->
-                <th class="th-sayur">Brt Masak (gr)</th><th class="th-sayur">Brt Total (kg)</th><th class="th-sayur">Sisa (kg)</th><th class="th-sayur">%</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>10/6</td>
-                <td style="text-align: left;">Nasi Goreng Spesial</td>
-                <td>820</td>
-                <!-- Karbo -->
-                <td>250</td><td>205,0</td><td>14,4</td><td>7,0%</td>
-                <!-- Prot H -->
-                <td>120</td><td>98,4</td><td>16,7</td><td>17,0%</td>
-                <!-- Prot N -->
-                <td>90</td><td>65,6</td><td>8,5</td><td>12,9%</td>
-                <!-- Sayur -->
-                <td>80</td><td>65,6</td><td>7,8</td><td>11,9%</td>
-            </tr>
-            <tr>
-                <td>10/6</td>
-                <td style="text-align: left;">Nasi Ayam Bakar</td>
-            {% set total = namespace(
-                karbo_tot=0, karbo_sisa=0,
-                proth_tot=0, proth_sisa=0,
-                protn_tot=0, protn_sisa=0,
-                sayur_tot=0, sayur_sisa=0,
-                karbo_ms=0, proth_ms=0, protn_ms=0, sayur_ms=0
-            ) %}
+    {% if not data %}
+    <div style="text-align: center; padding: 32px; color: var(--text-muted);">Belum ada data untuk periode ini.</div>
+    {% else %}
+        {% for item in data %}
+        <div style="margin-bottom: 40px; page-break-inside: avoid;">
+            <table class="sppg-table">
+                <thead>
+                    <tr>
+                        <th>Tgl/Bulan</th>
+                        <th>Nama Menu</th>
+                        <th>Sasaran<br>(penerima<br>manfaat)</th>
+                        <th>Berat<br>masakan<br>(gr)</th>
+                        <th>Berat<br>Total<br>(kg)</th>
+                        <th>Sisa (kg)</th>
+                        <th>% Persentase<br>sisa makanan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Karbohidrat -->
+                    <tr>
+                        <td rowspan="5">{{ item.tanggal_fmt }}<br><br><b>{{ item.nama_menu }}</b></td>
+                        <td style="text-align: left; font-weight: bold;">Karbohidrat</td>
+                        <td rowspan="5">{{ item.sasaran }}</td>
+                        <td>{{ item.karbo_ms }}</td>
+                        <td>{{ "%.1f"|format(item.karbo_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.karbo_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.karbo_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                    <!-- Protein Hewani -->
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Protein Hewani</td>
+                        <td>{{ item.proth_ms }}</td>
+                        <td>{{ "%.1f"|format(item.proth_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.proth_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.proth_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                    <!-- Protein Nabati -->
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Protein Nabati</td>
+                        <td>{{ item.protn_ms }}</td>
+                        <td>{{ "%.1f"|format(item.protn_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.protn_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.protn_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                    <!-- Sayur -->
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Sayur</td>
+                        <td>{{ item.sayur_ms }}</td>
+                        <td>{{ "%.1f"|format(item.sayur_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.sayur_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.sayur_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                    <!-- Buah -->
+                    <tr>
+                        <td style="text-align: left; font-weight: bold;">Buah</td>
+                        <td>{{ item.buah_ms }}</td>
+                        <td>{{ "%.1f"|format(item.buah_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.buah_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.buah_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                    <!-- Total -->
+                    <tr class="row-total">
+                        <td colspan="3">Total</td>
+                        <td>{{ item.total_ms }}</td>
+                        <td>{{ "%.1f"|format(item.total_tot)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.total_sisa)|replace('.', ',') }}</td>
+                        <td>{{ "%.1f"|format(item.total_pct)|replace('.', ',') }}%</td>
+                    </tr>
+                </tbody>
+            </table>
             
-            {% for item in data %}
-            {% set total.karbo_tot = total.karbo_tot + item.karbo_tot %}
-            {% set total.karbo_sisa = total.karbo_sisa + item.karbo_sisa %}
-            {% set total.proth_tot = total.proth_tot + item.proth_tot %}
-            {% set total.proth_sisa = total.proth_sisa + item.proth_sisa %}
-            {% set total.protn_tot = total.protn_tot + item.protn_tot %}
-            {% set total.protn_sisa = total.protn_sisa + item.protn_sisa %}
-            {% set total.sayur_tot = total.sayur_tot + item.sayur_tot %}
-            {% set total.sayur_sisa = total.sayur_sisa + item.sayur_sisa %}
-            
-            {% set total.karbo_ms = total.karbo_ms + item.karbo_ms %}
-            {% set total.proth_ms = total.proth_ms + item.proth_ms %}
-            {% set total.protn_ms = total.protn_ms + item.protn_ms %}
-            {% set total.sayur_ms = total.sayur_ms + item.sayur_ms %}
-            
-            <tr>
-                <td>{{ item.tanggal_fmt }}</td>
-                <td style="text-align: left;">{{ item.nama_menu }}</td>
-                <td>{{ item.porsi }}</td>
-                <!-- Karbo -->
-                <td>{{ item.karbo_ms }}</td><td>{{ "%.1f"|format(item.karbo_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.karbo_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.karbo_pct)|replace('.', ',') }}%</td>
-                <!-- Prot H -->
-                <td>{{ item.proth_ms }}</td><td>{{ "%.1f"|format(item.proth_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.proth_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.proth_pct)|replace('.', ',') }}%</td>
-                <!-- Prot N -->
-                <td>{{ item.protn_ms }}</td><td>{{ "%.1f"|format(item.protn_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.protn_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.protn_pct)|replace('.', ',') }}%</td>
-                <!-- Sayur -->
-                <td>{{ item.sayur_ms }}</td><td>{{ "%.1f"|format(item.sayur_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.sayur_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(item.sayur_pct)|replace('.', ',') }}%</td>
-            </tr>
-            {% else %}
-            <tr><td colspan="19" style="padding: 32px; color: var(--text-muted);">Belum ada data menu harian untuk bulan ini.</td></tr>
-            {% endfor %}
-            
-            {% if data %}
-            <tr class="row-total">
-                <td colspan="3">TOTAL</td>
-                <!-- Karbo -->
-                <td>{{ total.karbo_ms }}</td><td>{{ "%.1f"|format(total.karbo_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.karbo_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.karbo_sisa / total.karbo_tot * 100 if total.karbo_tot > 0 else 0)|replace('.', ',') }}%</td>
-                <!-- Prot H -->
-                <td>{{ total.proth_ms }}</td><td>{{ "%.1f"|format(total.proth_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.proth_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.proth_sisa / total.proth_tot * 100 if total.proth_tot > 0 else 0)|replace('.', ',') }}%</td>
-                <!-- Prot N -->
-                <td>{{ total.protn_ms }}</td><td>{{ "%.1f"|format(total.protn_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.protn_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.protn_sisa / total.protn_tot * 100 if total.protn_tot > 0 else 0)|replace('.', ',') }}%</td>
-                <!-- Sayur -->
-                <td>{{ total.sayur_ms }}</td><td>{{ "%.1f"|format(total.sayur_tot)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.sayur_sisa)|replace('.', ',') }}</td><td>{{ "%.1f"|format(total.sayur_sisa / total.sayur_tot * 100 if total.sayur_tot > 0 else 0)|replace('.', ',') }}%</td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
-    
-    <div class="form-footer">
-        <div class="sign-area" style="text-align: left;">
-            <div class="sign-title">Petugas Pengukur</div>
-            <div class="sign-name">Dodi R. & Rina S.</div>
+            <div class="form-footer">
+                <div>Petugas : <input type="text" class="sign-input"></div>
+                <div>Paraf : <input type="text" class="sign-input"></div>
+            </div>
         </div>
-        
-        <div class="legend">
-            <div class="legend-item"><div class="legend-box lb-normal"></div> &lt;10% normal</div>
-            <div class="legend-item"><div class="legend-box lb-perhatian"></div> 10-15% perhatian</div>
-            <div class="legend-item"><div class="legend-box lb-kritis"></div> &gt;15% kritis</div>
-        </div>
-        
-        <div class="sign-area" style="text-align: right;">
-            <div class="sign-title">Paraf Pengawas</div>
-            <div class="sign-name">Ayu Krisanti</div>
-        </div>
-    </div>
+        {% endfor %}
+    {% endif %}
 </div>
+
+<script>
+    function toggleFilterInputs() {
+        var filterType = document.getElementById('filter_type').value;
+        document.getElementById('filter_date').style.display = 'none';
+        document.getElementById('filter_week').style.display = 'none';
+        document.getElementById('filter_month').style.display = 'none';
+        
+        if (filterType === 'hari') {
+            document.getElementById('filter_date').style.display = 'inline-block';
+        } else if (filterType === 'minggu') {
+            document.getElementById('filter_week').style.display = 'inline-block';
+        } else if (filterType === 'bulan') {
+            document.getElementById('filter_month').style.display = 'inline-block';
+        }
+    }
+    
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleFilterInputs();
+    });
+
+    function exportToExcel() {
+        var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+        html += '<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>SPPG</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+        html += '<style>';
+        html += 'table { border-collapse: collapse; }';
+        html += 'th, td { border: 1px solid black; text-align: center; vertical-align: middle; }';
+        html += '.no-border { border: none !important; }';
+        html += '</style></head><body>';
+        
+        html += '<table>';
+        html += '<tr><th colspan="7" class="no-border" style="font-size: 16pt; text-align: center;">Formulir Pengukuran Volume Sisa Makanan Tahun 2026</th></tr>';
+        html += '<tr><th colspan="7" class="no-border" style="font-size: 14pt; text-align: center;">Satuan Pelayanan Pemenuhan Gizi (SPPG) DEBONG KULON - Kota Tegal</th></tr>';
+        html += '<tr><td colspan="7" class="no-border"></td></tr>';
+        
+        var tables = document.querySelectorAll('.sppg-table');
+        if (tables.length === 0) {
+            alert('Tidak ada data untuk di-export.');
+            return;
+        }
+        
+        tables.forEach(function(tbl) {
+            html += tbl.innerHTML;
+            html += '<tr><td colspan="7" class="no-border"></td></tr>';
+        });
+        
+        html += '<tr><td colspan="3" class="no-border" style="text-align: left;">Petugas : ........................................</td>';
+        html += '<td colspan="4" class="no-border" style="text-align: left;">Paraf : ........................................</td></tr>';
+        
+        html += '</table></body></html>';
+        
+        var blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'Formulir_SPPG.xls';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+</script>
 {% endblock %}
