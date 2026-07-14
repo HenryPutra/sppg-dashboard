@@ -430,6 +430,8 @@ def log_sinkronisasi():
         scan_total = 0
         for i in items:
             name = i.get('kategori', i.get('category', i.get('name', '')))
+            if name == 'Prot. Nabati' or name == 'Tempe/\\nTahu':
+                name = 'Protein Nabati'
             qty = int(i.get('jumlah', i.get('count', 0)))
             scan_total += qty
             if name in cat_totals:
@@ -871,6 +873,8 @@ def api_food_categories():
             
             for item in items:
                 cat_name = item.get('kategori', item.get('category', item.get('name', '')))
+                if cat_name == 'Prot. Nabati' or cat_name == 'Tempe/\\nTahu':
+                    cat_name = 'Protein Nabati'
                 qty = int(item.get('jumlah', item.get('count', 0)))
                 for cat in categories:
                     if cat['category'] == cat_name:
