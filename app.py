@@ -101,15 +101,18 @@ def calculate_dashboard_stats(nik=None):
             'score': f'{score}%'
         })
         
-    # Calculate stats
-    total_scanned = len(all_scans)
+    # Calculate stats for today
+    today_date = datetime.now().date()
+    today_scans = [s for s in all_scans if s.timestamp and isinstance(s.timestamp, datetime) and s.timestamp.date() == today_date]
+
+    total_scanned = len(today_scans)
     value_per_kg = 50000 # Asumsi Rp 50.000 per kg sisa
     
     cat_counts = {
         'Karbohidrat': 0, 'Protein Hewani': 0, 'Protein Nabati': 0, 'Sayur': 0, 'Buah': 0
     }
     
-    for s in all_scans:
+    for s in today_scans:
         items = json.loads(s.items_json) if s.items_json else []
         for i in items:
             cat = i.get('kategori')
